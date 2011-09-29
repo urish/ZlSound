@@ -1,5 +1,5 @@
 /**
- * Your Copyright Here
+ * Copyright (C) 2011, Uri Shaked.
  *
  * Appcelerator Titanium is Copyright (c) 2009-2010 by Appcelerator, Inc.
  * and licensed under the Apache Public License (version 2)
@@ -8,6 +8,8 @@
 #import "TiBase.h"
 #import "TiHost.h"
 #import "TiUtils.h"
+#import "ObjectAL.h"
+#import "ComSalsarhythmsoftwareZlsoundSampleProxy.h"
 
 @implementation ComSalsarhythmsoftwareZlsoundModule
 
@@ -33,7 +35,16 @@
 	// you *must* call the superclass
 	[super startup];
 	
-	NSLog(@"[INFO] %@ loaded",self);
+    device = [[ALDevice deviceWithDeviceSpecifier:nil] retain];
+    context = [[ALContext contextOnDevice:device attributes:nil] retain];
+    sourcePool = [[ALSoundSourcePool pool] retain];
+    [OpenALManager sharedInstance].currentContext = context;
+    
+    for (int i = 0; i < RESERVE_SOURCES; i++) {
+        [sourcePool addSource:[ALSource sourceOnContext:context]];
+    }
+
+	NSLog(@"[INFO] %@ (Zero Latency Sound Module) loaded",self);
 }
 
 -(void)shutdown:(id)sender
@@ -86,21 +97,20 @@
 
 #pragma Public APIs
 
--(id)example:(id)args
+-(id)loadSample:(id)args
 {
-	// example method
-	return @"hello world";
-}
-
--(id)exampleProp
-{
-	// example property getter
-	return @"hello world";
-}
-
--(void)exampleProp:(id)value
-{
-	// example property setter
+    NSString *fileName = [TiUtils stringValue:[args objectAtIndex:0]];
+    int loopIn = [TiUtils intValue:[args objectAtIndex:1]];
+    int loopOut = [TiUtils intValue:[args objectAtIndex:2]];
+    
+    ALBuffer * buffer = nil;
+    if ([fileName rangeOfString:@"://"].location != NSNotFound) {
+        buffer = [[OpenALManager sharedInstance] bufferFromUrl:[NSURL URLWithString:fileName]];
+    } else {
+        buffer = [[OpenALManager sharedInstance] bufferFromFile:fileName];
+    }
+    
+    return [[[ComUrishSoundAlsoundSampleProxy alloc] init: sourcePool: buffer: loopIn: loopOut] autorelease];
 }
 
 @end
