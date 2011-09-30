@@ -1,15 +1,20 @@
 Titanium.UI.setBackgroundColor('#000');
+Titanium.UI.iPhone.hideStatusBar();
 
 var ZLSound = require('com.salsarhythmsoftware.zlsound');
 
 function createNoteController(name, fileName, pitch, loop, rect) {
 	var soundFile = Ti.Filesystem.getFile(fileName).nativePath;
-	var sample = ZLSound.loadSample(soundFile, loop[0], loop[1]);
-	sample.pitch = pitch;
+	var sample = ZLSound.createSample({
+        media: soundFile,
+        loopIn: loop[0], 
+        loopOut: loop[1],
+        pitch: pitch
+    });
 	
 	function play() {
 		Ti.API.info("Playing: " + this.name);
-		sample.play();
+		sample.loop(1000);
 	}
 	
 	function stop() {
@@ -28,14 +33,14 @@ function createNoteController(name, fileName, pitch, loop, rect) {
 var noteDatabaseFile = Ti.Filesystem.getFile("notes.json");
 var noteDatabase = JSON.parse(noteDatabaseFile.read().toString());
 var win = Ti.UI.createWindow({
-	orientationModes: [Ti.UI.PORTRAIT]
+	orientationModes: [Ti.UI.LANDSCAPE_RIGHT, Ti.UI.LANDSCAPE_LEFT]
 });
 var isiPad = (Ti.Platform.osname == "ipad");
 
 var backgroundImage = Ti.UI.createImageView({
 	image: isiPad ? "background@2x.png" : "background.png",
-	width: isiPad ? 480 : 320,
-	height: isiPad ? 720 : 480,
+	height: isiPad ? 480 : 320,
+	width: isiPad ? 720 : 480,
 	top: isiPad ? 144 : 0,
 	left: isiPad ? 142 : 0
 });

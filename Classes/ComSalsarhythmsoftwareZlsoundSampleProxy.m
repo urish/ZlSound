@@ -13,21 +13,34 @@
 
 @implementation ComSalsarhythmsoftwareZlsoundSampleProxy
 
--(id)init: (ALSoundSourcePool*)pool: (ALBuffer*)buffer: (int)loopIn: (int)loopOut {
+
+@synthesize source = _source;
+@synthesize mainBuffer = _mainBuffer;
+@synthesize beginBuffer = _beginBuffer;
+@synthesize loopBuffer = _loopBuffer;
+
+-(id)initWithSourcePool: (ALSoundSourcePool*)pool andArgs:(id)args {
     if ((self = [super init])) {
-        sourcePool = [pool retain];
-        mainBuffer = [buffer retain];
-        beginBuffer = [[mainBuffer sliceWithName:@"begin" offset:0 size:loopOut] retain];
-        loopBuffer = [[mainBuffer sliceWithName:@"loop" offset:loopIn size:(loopOut-loopIn)] retain];
-        loopBuffer.freeDataOnDestroy = NO;
-        source = nil;
+        self->sourcePool = [pool retain];
         self->pitch = 1.0f;
 		self->volume = 1.0f;
 		self->pan = 0.0f;
+        self->media = nil;
+        self.source = nil;
+        self.mainBuffer = nil;
+        self.beginBuffer = nil;
+        self.loopBuffer = nil;
+        NSDictionary *properties = nil;
+        if ([args count] > 0 && [[args objectAtIndex:0] isKindOfClass:[NSDictionary class]]) {
+            properties = (NSDictionary*)[args objectAtIndex:0];
+        }
+        [self _initWithProperties:properties];
     }
     
     return self;
 }
+
+#pragma mark PRIVATE
 
 - (ALSource*)obtainSource {
     ALSource *result = (ALSource*)[sourcePool getFreeSource:NO];
@@ -50,31 +63,144 @@
     return result;
 }
 
+-(void) updateLoop {
+    if ((self.mainBuffer != nil) && (self->loopIn >= self.mainBuffer.size)) {
+        NSLog(@"[ZLSound] WARN Loop-in point beyond end of sample, disabling loop");
+        self->loopIn = -1;
+    }
+    if ((self.mainBuffer != nil) && (self->loopIn >= 0) && (self->loopOut > self->loopIn)) {
+        if (self->loopOut >= self.mainBuffer.size) {
+            NSLog(@"[ZLSound] WARN Loop out point beyond end of sample, setting to end of sample");        
+            self->loopOut = self.mainBuffer.size - 1;
+        }
+        if (self->loopIn > 0) {
+            self.beginBuffer = [self.mainBuffer sliceWithName:@"begin" offset:0 size:self->loopOut];
+        }
+        self.loopBuffer = [self.mainBuffer sliceWithName:@"loop" offset:self->loopIn size:(self->loopOut - self->loopIn)];
+    } else {
+        self.beginBuffer = nil;
+        self.loopBuffer = nil;
+    }
+}
+
+#pragma mark PUBLIC
+
+-(id)media {
+    return self->media;
+}
+
+-(void)setMedia: (id)value {
+    NSString *fileName = [TiUtils stringValue:value];
+    bool hadMedia = (self->media != nil);
+
+    self->media = [fileName retain];
+    if ([fileName rangeOfString:@"://"].location != NSNotFound) {
+        self.mainBuffer = [[OpenALManager sharedInstance] bufferFromUrl:[NSURL URLWithString:fileName]];
+    } else {
+        self.mainBuffer = [[OpenALManager sharedInstance] bufferFromFile:fileName];
+    }
+
+    if (self.mainBuffer == nil) {
+        NSLog(@"[ZLSound] WARN Failed to load media from file %@", fileName);        
+    }
+    
+    if (hadMedia == YES) {
+        NSLog(@"[ZLSound] INFO Media changed, clearing looping points");
+        self.beginBuffer = nil;
+        self.loopBuffer = nil;
+        self->loopIn = -1;
+        self->loopOut = -1;
+    }
+    [self updateLoop];    
+}
+
+-(id)loopIn {
+    return self->loopIn >= 0 ? NUMINT(self->loopIn) : nil;
+}
+
+-(void)setLoopIn: (id)value {
+    self->loopIn = (value != nil) ? [TiUtils intValue:value] : -1;
+    [self updateLoop];
+}
+
+-(id)loopOut {
+    return self->loopOut >= 0 ? NUMINT(self->loopOut) : nil;
+}
+
+-(void)setLoopOut: (id)value {
+    self->loopOut = (value != nil) ? [TiUtils intValue:value] : -1;
+    [self updateLoop];
+}
+
 -(id)play:(id)args {
+    if (_mainBuffer == nil) {
+        NSLog(@"[ZLSound] No sound loaded; Please set the 'media' property before calling play().");            
+        return nil;
+    }
+    
     @synchronized(sourcePool) {
-        if (source == nil) {
-            source = [[self obtainSource] retain];
-            source.pitch = self->pitch;
-			source.volume = self->volume;
-			source.pan = self->pan;
-            [source queueBuffer:beginBuffer];
-            [source play];
-            [source queueBuffer: loopBuffer repeat: LOOP_REPEAT_TIMES];
+        if (self.source == nil) {
+            self.source = [self obtainSource];
+            _source.pitch = self->pitch;
+			_source.volume = self->volume;
+			_source.pan = self->pan;
+            [_source queueBuffer:_mainBuffer];
+            [_source play];
+        } else {
+            if (_source.playing) {
+                NSLog(@"[ZLSound] Sound is already playing, call stop() first");
+            } else {
+                [_source play];
+            }
         }
     }
     
     return nil;
 }
 
+-(id)loop:(id)args {
+    if (_mainBuffer == nil) {
+        NSLog(@"[ZLSound] No sound loaded; Please set the 'media' property before calling loop().");            
+        return nil;
+    }
+
+    int times = [TiUtils intValue: [args objectAtIndex:0]];
+    @synchronized(sourcePool) {
+        if (self.source == nil) {
+            self.source = [self obtainSource];
+            _source.pitch = self->pitch;
+			_source.volume = self->volume;
+			_source.pan = self->pan;
+            if (_loopBuffer) {
+                [_source queueBuffer:(_beginBuffer != nil ? _beginBuffer : _loopBuffer)];
+            } else {
+                [_source queueBuffer:_mainBuffer];
+            }
+            [_source play];
+            if (times > 0) {
+                [_source queueBuffer:(_loopBuffer != nil ? _loopBuffer : _mainBuffer) repeat: times];
+            }
+        } else {
+            if (_source.playing) {
+                NSLog(@"[ZLSound] INFO Sound is already playing, queueing additional loops");
+                [_source queueBuffer:(_loopBuffer != nil ? _loopBuffer : _mainBuffer) repeat: times + 1];
+            } else {
+                [_source play];
+            }
+        }
+    } 
+    
+    return nil;
+}
+
 -(id)stop:(id)args {
     @synchronized(sourcePool) {
-        if (source != nil) {
-            if (!source.playing) {
-                NSLog(@"STOP but not playing? Will leak! %@", source);
+        if (self.source != nil) {
+            if (!self.source.playing) {
+                //NSLog(@"[ALSound] WARN Stopped a non-playing source?! %@", self.source);
             }
-            [source clear];
-            [source release];
-            source = nil;
+            [self.source clear];
+            self.source = nil;
         }
     }
 
@@ -82,7 +208,7 @@
 }
 
 -(id)playing {
-    return NUMBOOL(source ? [source playing] : NO);
+    return NUMBOOL(self.source ? [self.source playing] : NO);
 }
 
 -(id)pan {
@@ -91,8 +217,8 @@
 
 -(void)setPan:(id)value {
     self->pan = [value floatValue];
-	if (source != nil) {
-		source.pan = self->pan;
+	if (self.source != nil) {
+		self.source.pan = self->pan;
 	}
 }
 
@@ -102,8 +228,8 @@
 
 -(void)setPitch:(id)value {
     self->pitch = [value floatValue];
-	if (source != nil) {
-		source.pitch = self->pitch;
+	if (self.source != nil) {
+		self.source.pitch = self->pitch;
 	}
 }
 
@@ -113,18 +239,18 @@
 
 -(void)setVolume:(id)value {
     self->volume = [value floatValue];
-	if (source != nil) {
-		source.volume = self->volume;
+	if (self.source != nil) {
+		self.source.volume = self->volume;
 	}
 }
 
 - (void)dealloc {
     [self stop: nil];
     
-    [source release];
-    [beginBuffer release];
-    [loopBuffer release];
-    [mainBuffer release];
+    self.source = nil;
+    self.beginBuffer = nil;
+    self.loopBuffer = nil;
+    self.mainBuffer = nil;
     [sourcePool release];
     
     [super dealloc];

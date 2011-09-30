@@ -43,7 +43,7 @@
         [sourcePool addSource:[ALSource sourceOnContext:context]];
     }
 
-	NSLog(@"[INFO] %@ (Zero Latency Sound Module) loaded",self);
+	NSLog(@"[ZLSound] Zero Latency Sound Module loaded",self);
 }
 
 -(void)shutdown:(id)sender
@@ -96,20 +96,9 @@
 
 #pragma Public APIs
 
--(id)loadSample:(id)args
+-(id)createSample:(id)args 
 {
-    NSString *fileName = [TiUtils stringValue:[args objectAtIndex:0]];
-    int loopIn = [TiUtils intValue:[args objectAtIndex:1]];
-    int loopOut = [TiUtils intValue:[args objectAtIndex:2]];
-    
-    ALBuffer * buffer = nil;
-    if ([fileName rangeOfString:@"://"].location != NSNotFound) {
-        buffer = [[OpenALManager sharedInstance] bufferFromUrl:[NSURL URLWithString:fileName]];
-    } else {
-        buffer = [[OpenALManager sharedInstance] bufferFromFile:fileName];
-    }
-    
-    return [[[ComSalsarhythmsoftwareZlsoundSampleProxy alloc] init: sourcePool: buffer: loopIn: loopOut] autorelease];
+    return [[[ComSalsarhythmsoftwareZlsoundSampleProxy alloc] initWithSourcePool: sourcePool andArgs:args] autorelease];
 }
 
 @end
