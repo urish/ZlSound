@@ -1,4 +1,5 @@
 Titanium.UI.setBackgroundColor('#000');
+Titanium.UI.iPhone.hideStatusBar();
 
 var ZLSound = require('com.salsarhythmsoftware.zlsound');
 
@@ -28,14 +29,14 @@ function createNoteController(name, fileName, pitch, loop, rect) {
 var noteDatabaseFile = Ti.Filesystem.getFile("notes.json");
 var noteDatabase = JSON.parse(noteDatabaseFile.read().toString());
 var win = Ti.UI.createWindow({
-	orientationModes: [Ti.UI.PORTRAIT]
+	orientationModes: [Ti.UI.LANDSCAPE_RIGHT, Ti.UI.LANDSCAPE_LEFT]
 });
 var isiPad = (Ti.Platform.osname == "ipad");
 
 var backgroundImage = Ti.UI.createImageView({
 	image: isiPad ? "background@2x.png" : "background.png",
-	width: isiPad ? 480 : 320,
-	height: isiPad ? 720 : 480,
+	height: isiPad ? 480 : 320,
+	width: isiPad ? 720 : 480,
 	top: isiPad ? 144 : 0,
 	left: isiPad ? 142 : 0
 });
