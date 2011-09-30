@@ -1,27 +1,116 @@
-// This is a test harness for your module
-// You should do something interesting in this harness 
-// to test out the module and to provide instructions 
-// to users on how to use it by example.
+Titanium.UI.setBackgroundColor('#000');
 
+var ZLSound = require('com.salsarhythmsoftware.zlsound');
 
-// open a single window
-var window = Ti.UI.createWindow({
-	backgroundColor:'white'
-});
-var label = Ti.UI.createLabel();
-window.add(label);
-window.open();
-
-// TODO: write your module tests here
-var zlsound = require('com.salsarhythmsoftware.zlsound');
-Ti.API.info("module is => " + zlsound);
-
-label.text = zlsound.example();
-
-Ti.API.info("module exampleProp is => " + zlsound.exampleProp);
-zlsound.exampleProp = "This is a test value";
-
-if (Ti.Platform.name == "android") {
-	var proxy = zlsound.createExample({message: "Creating an example Proxy"});
-	proxy.printMessage("Hello world!");
+function noteController(name, fileName, pitch, loop, rect) {
+	var soundFile = Ti.Filesystem.getFile(fileName).nativePath;
+	var sample = ZLSound.loadSample(soundFile, loop[0], loop[1]);
+	sample.pitch = pitch;
+	
+	function play() {
+		Ti.API.info("Playing: " + this.name);
+		sample.play();
+	}
+	
+	function stop() {
+		Ti.API.info("Stopping: " + this.name);
+		this.sample.stop();
+	}
+	
+	return {
+		name: name,
+		rect: rect,
+		play: play,
+		stop: stop,
+	};
 }
+
+var noteDatabaseFile = Ti.Filesystem.getFile("notes.json");
+var noteDatabase = JSON.parse(noteDatabaseFile.read().toString());
+var win = Ti.UI.createWindow({
+	orientationModes: [Ti.UI.LANDSCAPE]
+});
+var isiPad = (Ti.Platform.osname == "ipad");
+
+var backgroundImage = Ti.UI.createImageView({
+	image: isiPad ? "background@2x.png" : "background.png",
+	width: isiPad ? 480 : 320,
+	height: isiPad ? 720 : 480,
+	top: isiPad ? 144 : 0,
+	left: isiPad ? 142 : 0
+});
+win.add(backgroundImage);
+
+var noteButtons = [];
+
+noteDatabase.notes.map( function(note) {
+	if (isiPad) {
+		note.rect = note.rect.map( function (x) {
+			return x * 1.5;
+		});
+	}
+
+	var noteController = noteController(note.name, note.file, note.pitch, note.loop, note.rect)
+	if (note.name.indexOf("#") >= 0) {
+		// Since sharps appear on top of other notes, they have to be first
+		noteButtons.unshift(noteController);
+	} else {
+		noteButtons.push(noteController);
+	}
+});
+
+function findNoteIndex(x, y) {
+	for (var i = 0; i < noteButtons.length; i++) {
+		var r = noteButtons[i].rect;
+		if ((r[0] <= x) && (r[1] <= y) && (r[0] + r[2] >= x) && (r[1] + r[3] >= y) ) {
+			return i;
+		}
+	}
+	return null;
+}
+
+var lastNoteIndex = null;
+
+function windowTouchStart(e) {
+	var noteIndex = findNoteIndex(e.x, e.y);
+	if (noteIndex !== lastNoteIndex) {
+		if (lastNoteIndex !== null) {
+			noteButtons[lastNoteIndex].stop();
+		}
+		if (noteIndex !== null) {
+			noteButtons[noteIndex].play();
+		}
+		lastNoteIndex = noteIndex;
+	}
+}
+
+function windowTouchEnd(e) {
+	if (lastNoteIndex !== null) {
+		noteButtons[lastNoteIndex].stop();
+	}
+	lastNoteIndex = null;
+}
+
+win.addEventListener("touchstart", windowTouchStart);
+win.addEventListener("touchmove", windowTouchStart);
+win.addEventListener("touchcancel", windowTouchEnd);
+win.addEventListener("touchend", windowTouchEnd);
+
+if (isiPad) {
+	var footer = Ti.UI.createLabel({
+		text: "Copyright (c) 2011, Uri Shaked",
+		color: 'white',
+		bottom: 10,
+		left: 10,
+		height: 'auto',
+		font: {
+			fontFamily:'Helvetica Neue',
+			fontSize:16
+		}
+	});
+	win.add(footer);
+}
+
+win.open({
+	transition:Titanium.UI.iPhone.AnimationStyle.FLIP_FROM_LEFT
+});
