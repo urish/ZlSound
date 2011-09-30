@@ -2,7 +2,7 @@ Titanium.UI.setBackgroundColor('#000');
 
 var ZLSound = require('com.salsarhythmsoftware.zlsound');
 
-function noteController(name, fileName, pitch, loop, rect) {
+function createNoteController(name, fileName, pitch, loop, rect) {
 	var soundFile = Ti.Filesystem.getFile(fileName).nativePath;
 	var sample = ZLSound.loadSample(soundFile, loop[0], loop[1]);
 	sample.pitch = pitch;
@@ -14,7 +14,7 @@ function noteController(name, fileName, pitch, loop, rect) {
 	
 	function stop() {
 		Ti.API.info("Stopping: " + this.name);
-		this.sample.stop();
+		sample.stop();
 	}
 	
 	return {
@@ -28,7 +28,7 @@ function noteController(name, fileName, pitch, loop, rect) {
 var noteDatabaseFile = Ti.Filesystem.getFile("notes.json");
 var noteDatabase = JSON.parse(noteDatabaseFile.read().toString());
 var win = Ti.UI.createWindow({
-	orientationModes: [Ti.UI.LANDSCAPE]
+	orientationModes: [Ti.UI.PORTRAIT]
 });
 var isiPad = (Ti.Platform.osname == "ipad");
 
@@ -50,7 +50,7 @@ noteDatabase.notes.map( function(note) {
 		});
 	}
 
-	var noteController = noteController(note.name, note.file, note.pitch, note.loop, note.rect)
+	var noteController = createNoteController(note.name, note.file, note.pitch, note.loop, note.rect)
 	if (note.name.indexOf("#") >= 0) {
 		// Since sharps appear on top of other notes, they have to be first
 		noteButtons.unshift(noteController);
