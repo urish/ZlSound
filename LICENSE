@@ -1,1 +1,7 @@
-TODO: place your license here and we'll include it in the module distribution
+This module is subject to the terms and conditions of the Appcelerator Module Marketplace. It must not be 
+distributed by any means except the Appcelerator Open Mobile Marketplace (https://marketplace.appcelerator.com/).
+
+The module is Copyright(c) 2011 by Uri Shaked. All Rights Reserved.
+
+This module includes some code which is licensed under the Apache License:
+ObjectAL, copyright 2009 Karl Stenerud, released under the Apache 2.0 license (http://www.apache.org/licenses/LICENSE-2.0)

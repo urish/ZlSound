@@ -4,6 +4,12 @@
 
 The ZLSound module allows you to play sounds with minimal (unnoticeable) latency. You can also set looping points, control volume, change pitch and pan.
 
+## Android version
+
+An android version is currently not available. If there will be enough community interest, however, we will
+definitely create an android version as well. If you are interested in an android version, please leave a 
+comment on the Appcelerator Mobile Marketplace page for this product and cast your vote.
+
 ## Accessing the ZLSound Module
 
 To access this module from JavaScript, you would do the following:
