@@ -8,7 +8,6 @@
 #import "TiBase.h"
 #import "TiHost.h"
 #import "TiUtils.h"
-#import "ObjectAL.h"
 #import "ComSalsarhythmsoftwareZlsoundSampleProxy.h"
 
 @implementation ComSalsarhythmsoftwareZlsoundModule
@@ -110,7 +109,7 @@
         buffer = [[OpenALManager sharedInstance] bufferFromFile:fileName];
     }
     
-    return [[[ComUrishSoundAlsoundSampleProxy alloc] init: sourcePool: buffer: loopIn: loopOut] autorelease];
+    return [[[ComSalsarhythmsoftwareZlsoundSampleProxy alloc] init: sourcePool: buffer: loopIn: loopOut] autorelease];
 }
 
 @end

@@ -89,8 +89,8 @@
     return NUMFLOAT(self->pan);
 }
 
--(void)setPitch:(id)value {
-    self->pitch = [value floatValue];
+-(void)setPan:(id)value {
+    self->pan = [value floatValue];
 	if (source != nil) {
 		source.pan = self->pan;
 	}
