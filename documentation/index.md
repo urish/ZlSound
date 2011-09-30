@@ -4,6 +4,13 @@
 
 The ZLSound module allows you to play sounds with minimal (unnoticeable) latency. You can also set looping points, control volume, change pitch and pan.
 
+## Important NOTICE
+
+Use real devices when testing your applications. The simulator is no substitute for the real thing. In our some of our tests, the simulator had clicks and cracks in the sound, while the real device always played the sounds smoothly.
+
+If you don't have an apple developer license yet, and you want to experience the performance of this module on
+a real device, you can download our [Free Pan-Flute Application](http://itunes.apple.com/us/app/zampona/id448009267?mt=8) from the App Store.
+
 ## Android version
 
 An android version is currently not available. If there will be enough community interest, however, we will
