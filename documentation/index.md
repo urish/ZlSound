@@ -1,39 +1,32 @@
-# zlsound Module
+# ZLSound Module
 
 ## Description
 
-TODO: Enter your module description here
+The ZLSound module allows you to play sounds with minimal (unnoticeable) latency. You can also set looping points, control volume, change pitch and pan.
 
-## Accessing the zlsound Module
+## Accessing the ZLSound Module
 
 To access this module from JavaScript, you would do the following:
 
-	var zlsound = require("com.salsarhythmsoftware.zlsound");
+	var ZLSound = require("com.salsarhythmsoftware.zlsound");
 
-The zlsound variable is a reference to the Module object.	
+The ZLSound variable is a reference to the Module object.	
 
-## Reference
+### createSample(properties[dict])
 
-TODO: If your module has an API, you should document
-the reference here.
+Creates a new sound sample for instant playback. Takes one optional argument, a dictionary with
+the properties defined in <em>[ZLSound.Sample](Sample.html)</em>.
 
-### ___PROJECTNAMEASIDENTIFIER__.function
-
-TODO: This is an example of a module function.
-
-### ___PROJECTNAMEASIDENTIFIER__.property
-
-TODO: This is an example of a module property.
+Returns a <em>[ZLSound.Sample](Sample.html)</em> object.
 
 ## Usage
 
-TODO: Enter your usage example here
+See the provided example application (under example/app.js).
 
 ## Author
 
-TODO: Enter your author name, email and other contact
-details you want to share here. 
+Uri Shaked, [uri@salsa4fun.co.il](mailto:uri@salsa4fun.co.il)
 
 ## License
 
-TODO: Enter your license/legal information here.
+Copyright(c) 2011 by Uri Shaked. All Rights Reserved. Please see the LICENSE file included in the distribution for further details.
