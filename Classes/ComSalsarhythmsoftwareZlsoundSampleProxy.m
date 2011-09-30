@@ -75,6 +75,8 @@
         }
         if (self->loopIn > 0) {
             self.beginBuffer = [self.mainBuffer sliceWithName:@"begin" offset:0 size:self->loopOut];
+        } else {
+            self.beginBuffer = nil;
         }
         self.loopBuffer = [self.mainBuffer sliceWithName:@"loop" offset:self->loopIn size:(self->loopOut - self->loopIn)];
     } else {
