@@ -5,12 +5,16 @@ var ZLSound = require('com.salsarhythmsoftware.zlsound');
 
 function createNoteController(name, fileName, pitch, loop, rect) {
 	var soundFile = Ti.Filesystem.getFile(fileName).nativePath;
-	var sample = ZLSound.loadSample(soundFile, loop[0], loop[1]);
-	sample.pitch = pitch;
+	var sample = ZLSound.createSample({
+        media: soundFile,
+        loopIn: loop[0], 
+        loopOut: loop[1],
+        pitch: pitch
+    });
 	
 	function play() {
 		Ti.API.info("Playing: " + this.name);
-		sample.play();
+		sample.loop(1000);
 	}
 	
 	function stop() {

@@ -12,16 +12,26 @@
 
 @interface ComSalsarhythmsoftwareZlsoundSampleProxy : TiProxy {
     ALSoundSourcePool * sourcePool;
-    ALBuffer * mainBuffer;
-    ALBuffer * beginBuffer;
-    ALBuffer * loopBuffer;
-    ALSource * source;
+    ALBuffer * _mainBuffer;
+    ALBuffer * _beginBuffer;
+    ALBuffer * _loopBuffer;
+    ALSource * _source;
+    
+    NSString * media;
 
     float pitch;
 	float volume;
 	float pan;
+    
+    int loopIn;
+    int loopOut;
 }
 
--(id)init: (ALSoundSourcePool*)pool :(ALBuffer*)buffer: (int)loopIn: (int)loopOut;
+@property (nonatomic, retain) ALBuffer * mainBuffer;
+@property (nonatomic, retain) ALBuffer * beginBuffer;
+@property (nonatomic, retain) ALBuffer * loopBuffer;
+@property (nonatomic, retain) ALSource * source;
+
+-(id)initWithSourcePool: (ALSoundSourcePool*)pool andArgs:(id)args;
 
 @end
