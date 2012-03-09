@@ -25,6 +25,7 @@
         self->pitch = 1.0f;
 		self->volume = 1.0f;
 		self->pan = 0.0f;
+        self->reverbLevel = 0.5f;
         self->media = nil;
         self.source = nil;
         self.mainBuffer = nil;
@@ -146,6 +147,7 @@
             _source.pitch = self->pitch;
 			_source.volume = self->volume;
 			_source.pan = self->pan;
+            _source.reverbSendLevel = self->reverbLevel;
             [_source queueBuffer:_mainBuffer];
             [_source play];
         } else {
@@ -173,6 +175,7 @@
             _source.pitch = self->pitch;
 			_source.volume = self->volume;
 			_source.pan = self->pan;
+            _source.reverbSendLevel = self->reverbLevel;
             if (_loopBuffer) {
                 [_source queueBuffer:(_beginBuffer != nil ? _beginBuffer : _loopBuffer)];
             } else {
@@ -180,12 +183,12 @@
             }
             [_source play];
             if (times > 0) {
-                [_source queueBuffer:(_loopBuffer != nil ? _loopBuffer : _mainBuffer) repeat: times];
+                [_source queueBuffer:(_loopBuffer != nil ? _loopBuffer : _mainBuffer) repeats: times];
             }
         } else {
             if (_source.playing) {
                 NSLog(@"[ZLSound] INFO Sound is already playing, queueing additional loops");
-                [_source queueBuffer:(_loopBuffer != nil ? _loopBuffer : _mainBuffer) repeat: times + 1];
+                [_source queueBuffer:(_loopBuffer != nil ? _loopBuffer : _mainBuffer) repeats: times + 1];
             } else {
                 [_source play];
             }
@@ -244,6 +247,17 @@
 	if (self.source != nil) {
 		self.source.volume = self->volume;
 	}
+}
+
+-(id)reverbLevel {
+    return NUMFLOAT(self->reverbLevel);
+}
+
+-(void)setReverbLevel:(id)value {
+    self->reverbLevel = [value floatValue];
+    if (self.source != nil) {
+        self.source.reverbSendLevel = self->reverbLevel;
+    }
 }
 
 - (void)dealloc {

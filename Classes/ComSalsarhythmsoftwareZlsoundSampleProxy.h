@@ -22,6 +22,7 @@
     float pitch;
 	float volume;
 	float pan;
+    float reverbLevel;
     
     int loopIn;
     int loopOut;

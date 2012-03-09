@@ -101,6 +101,45 @@ win.addEventListener("touchmove", windowTouchStart);
 win.addEventListener("touchcancel", windowTouchEnd);
 win.addEventListener("touchend", windowTouchEnd);
 
+/*** REVERB Controls ***/
+var reverbLabel = Ti.UI.createLabel({
+    text: "REVERB",
+    color: 'white',
+    bottom: 76,
+    right: 10,
+    width: 60,
+    height: 'auto',
+    font: {
+        fontFamily:'Helvetica Neue',
+        fontSize:12
+    }
+});
+win.add(reverbLabel);
+
+var reverbSwitch = Ti.UI.createSwitch({
+    value: false,
+    right: 8,
+    bottom: 44
+});
+reverbSwitch.addEventListener("change", function(event) {
+    ZLSound.reverb.enabled = reverbSwitch.value;
+});
+win.add(reverbSwitch);
+
+var reverbConfigButton = Ti.UI.createButton({
+    title: "Config",
+    width: 80,
+    height: 26,
+    right: 8,
+    bottom: 12
+});
+reverbConfigButton.addEventListener("click", function(event) {
+    alert("TODO"); // TODO
+});
+win.add(reverbConfigButton);
+
+/*** iPAD Customizations ***/
+
 if (isiPad) {
 	var footer = Ti.UI.createLabel({
 		text: "Copyright (c) 2011, Uri Shaked",

@@ -87,6 +87,9 @@
 		6F22B7B01435211B0097D505 /* SynthesizeSingleton.h in Headers */ = {isa = PBXBuildFile; fileRef = 6F22B7751435211B0097D505 /* SynthesizeSingleton.h */; };
 		6F22B7B614354F120097D505 /* ComSalsarhythmsoftwareZlsoundSampleProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = 6F22B7B414354F120097D505 /* ComSalsarhythmsoftwareZlsoundSampleProxy.h */; };
 		6F22B7B714354F120097D505 /* ComSalsarhythmsoftwareZlsoundSampleProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = 6F22B7B514354F120097D505 /* ComSalsarhythmsoftwareZlsoundSampleProxy.m */; };
+		6F87268F15099FE200C16FAA /* ComSalsarhythmsoftwareZlsoundReverbProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = 6F87268D15099FE200C16FAA /* ComSalsarhythmsoftwareZlsoundReverbProxy.h */; };
+		6F87269015099FE200C16FAA /* ComSalsarhythmsoftwareZlsoundReverbProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = 6F87268E15099FE200C16FAA /* ComSalsarhythmsoftwareZlsoundReverbProxy.m */; };
+		6F8726941509A4B200C16FAA /* app.js in Sources */ = {isa = PBXBuildFile; fileRef = 6F8726931509A4B200C16FAA /* app.js */; };
 		AA747D9F0F9514B9006C5449 /* ComSalsarhythmsoftwareZlsound_Prefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = AA747D9E0F9514B9006C5449 /* ComSalsarhythmsoftwareZlsound_Prefix.pch */; };
 		AACBBE4A0F95108600F1A2B1 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AACBBE490F95108600F1A2B1 /* Foundation.framework */; };
 /* End PBXBuildFile section */
@@ -169,6 +172,9 @@
 		6F22B7751435211B0097D505 /* SynthesizeSingleton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SynthesizeSingleton.h; sourceTree = "<group>"; };
 		6F22B7B414354F120097D505 /* ComSalsarhythmsoftwareZlsoundSampleProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ComSalsarhythmsoftwareZlsoundSampleProxy.h; path = Classes/ComSalsarhythmsoftwareZlsoundSampleProxy.h; sourceTree = "<group>"; };
 		6F22B7B514354F120097D505 /* ComSalsarhythmsoftwareZlsoundSampleProxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = ComSalsarhythmsoftwareZlsoundSampleProxy.m; path = Classes/ComSalsarhythmsoftwareZlsoundSampleProxy.m; sourceTree = "<group>"; };
+		6F87268D15099FE200C16FAA /* ComSalsarhythmsoftwareZlsoundReverbProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ComSalsarhythmsoftwareZlsoundReverbProxy.h; path = Classes/ComSalsarhythmsoftwareZlsoundReverbProxy.h; sourceTree = "<group>"; };
+		6F87268E15099FE200C16FAA /* ComSalsarhythmsoftwareZlsoundReverbProxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = ComSalsarhythmsoftwareZlsoundReverbProxy.m; path = Classes/ComSalsarhythmsoftwareZlsoundReverbProxy.m; sourceTree = "<group>"; };
+		6F8726931509A4B200C16FAA /* app.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; name = app.js; path = example/app.js; sourceTree = "<group>"; };
 		AA747D9E0F9514B9006C5449 /* ComSalsarhythmsoftwareZlsound_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ComSalsarhythmsoftwareZlsound_Prefix.pch; sourceTree = SOURCE_ROOT; };
 		AACBBE490F95108600F1A2B1 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		D2AAC07E0554694100DB518D /* libComSalsarhythmsoftwareZlsound.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libComSalsarhythmsoftwareZlsound.a; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -197,6 +203,7 @@
 		0867D691FE84028FC02AAC07 /* zlsound */ = {
 			isa = PBXGroup;
 			children = (
+				6F8726921509A4A100C16FAA /* Demo App */,
 				6F22B732143520FC0097D505 /* External Libs */,
 				08FB77AEFE84172EC02AAC07 /* Classes */,
 				32C88DFF0371C24200C91783 /* Other Sources */,
@@ -223,6 +230,8 @@
 				24DD6CF81134B3F500162E58 /* ComSalsarhythmsoftwareZlsoundModule.m */,
 				6F22B7B414354F120097D505 /* ComSalsarhythmsoftwareZlsoundSampleProxy.h */,
 				6F22B7B514354F120097D505 /* ComSalsarhythmsoftwareZlsoundSampleProxy.m */,
+				6F87268D15099FE200C16FAA /* ComSalsarhythmsoftwareZlsoundReverbProxy.h */,
+				6F87268E15099FE200C16FAA /* ComSalsarhythmsoftwareZlsoundReverbProxy.m */,
 			);
 			name = Classes;
 			sourceTree = "<group>";
@@ -352,6 +361,14 @@
 			path = Support;
 			sourceTree = "<group>";
 		};
+		6F8726921509A4A100C16FAA /* Demo App */ = {
+			isa = PBXGroup;
+			children = (
+				6F8726931509A4B200C16FAA /* app.js */,
+			);
+			name = "Demo App";
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -396,6 +413,7 @@
 				6F22B7AF1435211B0097D505 /* ObjectALMacros.h in Headers */,
 				6F22B7B01435211B0097D505 /* SynthesizeSingleton.h in Headers */,
 				6F22B7B614354F120097D505 /* ComSalsarhythmsoftwareZlsoundSampleProxy.h in Headers */,
+				6F87268F15099FE200C16FAA /* ComSalsarhythmsoftwareZlsoundReverbProxy.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -495,6 +513,8 @@
 				6F22B7AB1435211B0097D505 /* OALAudioFile.m in Sources */,
 				6F22B7AE1435211B0097D505 /* OALTools.m in Sources */,
 				6F22B7B714354F120097D505 /* ComSalsarhythmsoftwareZlsoundSampleProxy.m in Sources */,
+				6F87269015099FE200C16FAA /* ComSalsarhythmsoftwareZlsoundReverbProxy.m in Sources */,
+				6F8726941509A4B200C16FAA /* app.js in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

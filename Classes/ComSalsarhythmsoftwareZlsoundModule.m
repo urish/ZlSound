@@ -9,6 +9,7 @@
 #import "TiHost.h"
 #import "TiUtils.h"
 #import "ComSalsarhythmsoftwareZlsoundSampleProxy.h"
+#import "ComSalsarhythmsoftwareZlsoundReverbProxy.h"
 
 @implementation ComSalsarhythmsoftwareZlsoundModule
 
@@ -60,7 +61,9 @@
 
 -(void)dealloc
 {
-	// release any resources that have been retained by the module
+    [context release];
+    [sourcePool release];
+	[device release];
 	[super dealloc];
 }
 
@@ -99,6 +102,10 @@
 -(id)createSample:(id)args 
 {
     return [[[ComSalsarhythmsoftwareZlsoundSampleProxy alloc] initWithSourcePool: sourcePool andArgs:args] autorelease];
+}
+
+-(id)reverb {
+    return [[ComSalsarhythmsoftwareZlsoundReverbProxy alloc] initWithListener:context.listener];
 }
 
 @end
