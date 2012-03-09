@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 10-01-09.
 //
-// Copyright 2009 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -31,25 +34,13 @@
 #import "OpenALManager.h"
 
 
-/**
- * (INTERNAL USE) Private methods for ALDevice.
- */
-@interface ALDevice (Private)
-
-/** (INTERNAL USE) Close any resources belonging to the OS.
- */
-- (void) closeOSResources;
-
-@end
-
-
 @implementation ALDevice
 
 #pragma mark Object Management
 
 + (id) deviceWithDeviceSpecifier:(NSString*) deviceSpecifier
 {
-	return [[[self alloc] initWithDeviceSpecifier:deviceSpecifier] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithDeviceSpecifier:deviceSpecifier]);
 }
 
 - (id) initWithDeviceSpecifier:(NSString*) deviceSpecifier
@@ -62,13 +53,13 @@
 		if(nil == device)
 		{
 			OAL_LOG_ERROR(@"%@: Failed to init device %@. Returning nil", self, deviceSpecifier);
-			[self release];
+			arcsafe_release(self);
 			return nil;
 		}
 
 		suspendHandler = [[OALSuspendHandler alloc] initWithTarget:nil selector:nil];
 		
-		contexts = mutant(5);
+		contexts = [NSMutableArray newMutableArrayUsingWeakReferencesWithCapacity:5];
 			
 		[[OpenALManager sharedInstance] notifyDeviceInitializing:self];
 		[[OpenALManager sharedInstance] addSuspendListener:self];
@@ -83,39 +74,11 @@
 	[[OpenALManager sharedInstance] removeSuspendListener:self];
 	[[OpenALManager sharedInstance] notifyDeviceDeallocating:self];
 
-	[self closeOSResources];
+    [ALWrapper closeDevice:device];
 	
-	[contexts release];
-	[suspendHandler release];
-
-	[super dealloc];
-}
-
-- (void) closeOSResources
-{
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		if(nil != device)
-		{
-			[ALWrapper closeDevice:device];
-			device = nil;
-		}
-	}
-}
-
-- (void) close
-{
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		if(nil != contexts)
-		{
-			[contexts makeObjectsPerformSelector:@selector(close)];
-			[contexts release];
-			contexts = nil;
-
-			[self closeOSResources];
-		}
-	}
+	arcsafe_release(contexts);
+	arcsafe_release(suspendHandler);
+	arcsafe_super_dealloc();
 }
 
 

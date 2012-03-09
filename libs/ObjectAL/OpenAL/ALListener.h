@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 10-01-07.
 //
-// Copyright 2009 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -27,6 +30,7 @@
 #import <Foundation/Foundation.h>
 #import "ALTypes.h"
 #import "OALSuspendHandler.h"
+#import <OpenAL/oalMacOSX_OALExtensions.h>
 
 @class ALContext;
 
@@ -41,7 +45,7 @@
  */
 @interface ALListener : NSObject <OALSuspendManager>
 {
-	ALContext* context; // Weak reference
+	__unsafe_unretained ALContext* context; // Weak reference
 	bool muted;
 	float gain;
 	
@@ -53,7 +57,7 @@
 #pragma mark Properties
 
 /** The context this listener belongs to. */
-@property(readonly) ALContext* context;
+@property(nonatomic,readonly) ALContext* context;
 
 /** Causes this listener to stop hearing sound.
  * It's called "muted" rather than "deaf" to give a consistent name with other mute functions.
@@ -79,6 +83,46 @@
 * Only valid if this listener's context is the current context.
 */
 @property(readwrite,assign) ALVector velocity;
+
+/** Turns on reverb. (iOS 5.0+)
+ */
+@property(readwrite,assign) bool reverbOn;
+
+/** The global reverb level (from -40.0db to 40.0db). (iOS 5.0+)
+ */
+@property(readwrite,assign) float globalReverbLevel;
+
+/** The room type to simulate for reverb. (iOS 5.0+)
+ *
+ * Allowed room types:
+ *
+ * ALC_ASA_REVERB_ROOM_TYPE_SmallRoom
+ * ALC_ASA_REVERB_ROOM_TYPE_MediumRoom
+ * ALC_ASA_REVERB_ROOM_TYPE_LargeRoom
+ * ALC_ASA_REVERB_ROOM_TYPE_MediumHall
+ * ALC_ASA_REVERB_ROOM_TYPE_LargeHall
+ * ALC_ASA_REVERB_ROOM_TYPE_Plate
+ * ALC_ASA_REVERB_ROOM_TYPE_MediumChamber
+ * ALC_ASA_REVERB_ROOM_TYPE_LargeChamber
+ * ALC_ASA_REVERB_ROOM_TYPE_Cathedral
+ * ALC_ASA_REVERB_ROOM_TYPE_LargeRoom2
+ * ALC_ASA_REVERB_ROOM_TYPE_MediumHall2
+ * ALC_ASA_REVERB_ROOM_TYPE_MediumHall3
+ * ALC_ASA_REVERB_ROOM_TYPE_LargeHall2
+ */
+@property(readwrite,assign) int reverbRoomType;
+
+/** The equalizer gain for reverb. (iOS 5.0+)
+ */
+@property(readwrite,assign) float reverbEQGain;
+
+/** The equalizer bandwidth for reverb. (iOS 5.0+)
+ */
+@property(readwrite,assign) float reverbEQBandwidth;
+
+/** The equalizer frequency for reverb. (iOS 5.0+)
+ */
+@property(readwrite,assign) float reverbEQFrequency;
 
 
 #pragma mark Object Management

@@ -4,27 +4,31 @@
 //
 //  Created by Karl Stenerud on 10-10-10.
 //
-// Copyright 2010 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
 
 #import "OALUtilityActions.h"
+#import "ObjectALMacros.h"
 
 
 #pragma mark OALTargetedAction
@@ -36,7 +40,7 @@
 
 + (id) actionWithTarget:(id) target action:(OALAction*) action
 {
-	return [[(OALTargetedAction*)[self alloc] initWithTarget:target action:action] autorelease];
+	return arcsafe_autorelease([(OALTargetedAction*)[self alloc] initWithTarget:target action:action]);
 }
 
 - (id) initWithTarget:(id) targetIn action:(OALAction*) actionIn
@@ -44,7 +48,7 @@
 	if(nil != (self = [super initWithDuration:actionIn.duration]))
 	{
 		forcedTarget = targetIn; // Weak reference
-		action = [actionIn retain];
+		action = arcsafe_retain(actionIn);
 		duration = action.duration;
 	}
 	return self;
@@ -52,8 +56,8 @@
 
 - (void) dealloc
 {
-	[action release];
-	[super dealloc];
+	arcsafe_release(action);
+    arcsafe_super_dealloc();
 }
 
 
@@ -122,12 +126,12 @@
 	}
 	va_end(params);
 	
-	return [[[self alloc] initWithActions:actions] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithActions:actions]);
 }
 
 + (id) actionsFromArray:(NSArray*) actions;
 {
-	return [[[self alloc] initWithActions:actions] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithActions:actions]);
 }
 
 - (id) initWithActions:(NSArray*) actionsIn
@@ -137,7 +141,7 @@
 		if([actionsIn isKindOfClass:[NSMutableArray class]])
 		{
 			// Take ownership if it's a mutable array.
-			actions = [actionsIn retain];
+			actions = (NSMutableArray*)arcsafe_retain(actionsIn);
 		}
 		else
 		{
@@ -152,9 +156,9 @@
 
 - (void) dealloc
 {
-	[actions release];
-	[pDurations release];
-	[super dealloc];
+	arcsafe_release(actions);
+	arcsafe_release(pDurations);
+    arcsafe_super_dealloc();
 }
 
 
@@ -318,12 +322,12 @@ COCOS2D_SUBCLASS(OALSequentialActions)
 	}
 	va_end(params);
 	
-	return [[[self alloc] initWithActions:actions] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithActions:actions]);
 }
 
 + (id) actionsFromArray:(NSArray*) actions;
 {
-	return [[[self alloc] initWithActions:actions] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithActions:actions]);
 }
 
 - (id) initWithActions:(NSArray*) actionsIn
@@ -333,7 +337,7 @@ COCOS2D_SUBCLASS(OALSequentialActions)
 		if([actionsIn isKindOfClass:[NSMutableArray class]])
 		{
 			// Take ownership if it's a mutable array.
-			actions = [actionsIn retain];
+			actions = (NSMutableArray*)arcsafe_retain(actionsIn);
 		}
 		else
 		{
@@ -349,10 +353,10 @@ COCOS2D_SUBCLASS(OALSequentialActions)
 
 - (void) dealloc
 {
-	[actions release];
-	[pDurations release];
-	[actionsWithDuration release];
-	[super dealloc];
+	arcsafe_release(actions);
+	arcsafe_release(pDurations);
+	arcsafe_release(actionsWithDuration);
+	arcsafe_super_dealloc();
 }
 
 
@@ -462,16 +466,16 @@ COCOS2D_SUBCLASS(OALConcurrentActions)
 + (id) actionWithCallTarget:(id) callTarget
 				   selector:(SEL) selector
 {
-	return [[[self alloc] initWithCallTarget:callTarget selector:selector] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithCallTarget:callTarget selector:selector]);
 }
 
 + (id) actionWithCallTarget:(id) callTarget
 				   selector:(SEL) selector
 				 withObject:(id) object
 {
-	return [[[self alloc] initWithCallTarget:callTarget
-									selector:selector
-								  withObject:object] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithCallTarget:callTarget
+                                                       selector:selector
+                                                     withObject:object]);
 }
 
 + (id) actionWithCallTarget:(id) callTarget
@@ -479,10 +483,10 @@ COCOS2D_SUBCLASS(OALConcurrentActions)
 				 withObject:(id) firstObject
 				 withObject:(id) secondObject
 {
-	return [[[self alloc] initWithCallTarget:callTarget
-									selector:selector
-								  withObject:firstObject
-								  withObject:secondObject] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithCallTarget:callTarget
+                                                       selector:selector
+                                                     withObject:firstObject
+                                                     withObject:secondObject]);
 }
 
 - (id) initWithCallTarget:(id) callTargetIn selector:(SEL) selectorIn
@@ -534,6 +538,8 @@ COCOS2D_SUBCLASS(OALConcurrentActions)
 	[super startAction];
 #endif /* !OBJECTAL_USE_COCOS2D_ACTIONS */
 	
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
 	switch(numObjects)
 	{
 		case 2:
@@ -545,6 +551,7 @@ COCOS2D_SUBCLASS(OALConcurrentActions)
 		default:
 			[callTarget performSelector:selector];
 	}
+#pragma clang diagnostic pop
 }
 
 #if OBJECTAL_USE_COCOS2D_ACTIONS

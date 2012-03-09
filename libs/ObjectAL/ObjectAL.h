@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 15/12/09.
 //
-// Copyright 2009 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -163,9 +166,9 @@
  To add ObjectAL to your project, do the following:
 
  <ol>
-	<li>Copy libs/ObjectAL from this project into your project. You can simply drag it into the
-		"Groups & Files" section in xcode if you like (be sure to select "Copy items into
-		destination group's folder"). <br/>
+	<li>Copy ObjectAL/ObjectAL from this project into your project.
+        You can simply drag it into the "Groups & Files" section in xcode if you
+        like (be sure to select "Copy items into destination group's folder"). <br/>
 		Alternatively, you can build ObjectAL as a static library (as it's configured to do in the
 		ObjectAL demo project).<br/><br/>
 	</li>
@@ -715,37 +718,4 @@
  - Some codecs may cause problems with sound playback. Try removing them.
  - Programs that redirect audio can wreak havoc on the simulator. Try removing them.
  
- 
- <br>
- \subsection simulator_no_sound No OpenAL Sound in Simulator
-
- <strong>Note:</strong> As of XCode 3.2.3, this problem doesn't seem to be surfacing anymore.
- The workaround code is now disabled by default. You can re-enable it by setting
- OBJECTAL_CFG_SIMULATOR_BUG_WORKAROUND to 1 in ObjectALConfig.h.
-
- There's a bug in the simulator that causes OpenAL-based sounds to stop playing in certain cases
- when using AVAudioPlayer (OALAudioTrack). ObjectAL contains code to work around this issue,
- but it's not a 100% fix.
- 
- 
- <br>
- \subsection simulator_freezing Simulator Freezups
- 
- <strong>Note:</strong> As of XCode 3.2.3, this problem doesn't seem to be surfacing anymore.
- The workaround code is now disabled by default. You can re-enable it by setting
- OBJECTAL_CFG_SIMULATOR_BUG_WORKAROUND to 1 in ObjectALConfig.h.
- 
- There's a particularly nasty bug in the simulator's OpenAL and AVAudioPlayer implementation that
- causes the simulator to freeze for 60+ seconds in a very specific case:
- 
- If you use OALAudioTrack to play background music, then stop the music,
- then close the current OpenAL context, the simulator will freeze (a real device won't).
- 
- This is not really a huge problem, however, since you really should be making a sound manager
- singleton object (what OALSimpleAudio is, basically) to handle the ALDevice and ALContext
- (which will in 99.9% of cases last for the entire duration of your program).
- 
- If you absolutely must close the current OpenAL context, start any OALAudioTrack objects playing
- at 0 volume first.
- 
- */
+*/

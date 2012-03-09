@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 15/12/09.
 //
-// Copyright 2009 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -40,8 +43,12 @@
  */
 @interface ALChannelSource : NSObject <ALSoundSource>
 {
+    /** Pool holding the actual sources */
 	ALSoundSourcePool* sourcePool;
 	ALContext* context;
+    
+    /** If YES, the defaults of this channel have been initialized */
+    bool defaultsInitialized;
 
 	float pitch;
 	float gain;
@@ -53,6 +60,9 @@
 	float coneOuterGain;
 	float coneInnerAngle;
 	float coneOuterAngle;
+    float reverbSendLevel;
+    float reverbOcclusion;
+    float reverbObstruction;
 	
 	ALPoint position;
 	ALVector velocity;
@@ -61,6 +71,46 @@
 	int sourceRelative;
 	int sourceType;
 	bool looping;
+
+    /** Default pitch */
+    float defaultPitch;
+    /** Default gain */
+	float defaultGain;
+    /** Default max distance */
+	float defaultMaxDistance;
+    /** Default rolloff factor */
+	float defaultRolloffFactor;
+    /** Default reference distance */
+	float defaultReferenceDistance;
+    /** Default min gain */
+	float defaultMinGain;
+    /** Default max gain */
+	float defaultMaxGain;
+    /** Default cone outer gain */
+	float defaultConeOuterGain;
+    /** Default cone inner angle */
+	float defaultConeInnerAngle;
+    /** Default cone outer angle */
+	float defaultConeOuterAngle;
+    /** Default position */
+	ALPoint defaultPosition;
+    /** Default veloxity */
+	ALVector defaultVelocity;
+    /** Default direction */
+	ALVector defaultDirection;
+	/** Default source relative */
+	int defaultSourceRelative;
+    /** Default source type */
+	int defaultSourceType;
+    /** Default looping */
+	bool defaultLooping;
+    /* Default reverb send level */
+    float defaultReverbSendLevel;
+    /* Default occlusion */
+    float defaultReverbOcclusion;
+    /* Default obstruction */
+    float defaultReverbObstruction;
+    
 
 	bool interruptible;
 	bool muted;
@@ -110,13 +160,13 @@
 #pragma mark Properties
 
 /** This source's owning context. */
-@property(readonly) ALContext* context;
+@property(nonatomic,readonly) ALContext* context;
 
 /** All sources being used by this channel. Do not modify! */
-@property(readonly) ALSoundSourcePool* sourcePool;
+@property(nonatomic,readonly) ALSoundSourcePool* sourcePool;
 
 /** The number of sources reserved by this channel. */
-@property(readwrite,assign,nonatomic) unsigned int reservedSources;
+@property(readwrite,assign) int reservedSources;
 
 #pragma mark Object Management
 
@@ -134,8 +184,43 @@
  */
 - (id) initWithSources:(int) reservedSources;
 
+/** Set this channel's default values from those in the specified source.
+ *
+ * @param source the source to set default values from.
+ */
+- (void) setDefaultsFromSource:(id<ALSoundSource>) source;
+
 /** Reset all sources in this channel to their default state.
  */
 - (void) resetToDefault;
+
+/** Add a source to this channel.
+ *
+ * @param source The source to add.
+ */
+- (void) addSource:(id<ALSoundSource>) source;
+
+/** Remove a source from the channel.
+ *
+ * @param source The source to remove. If nil, remove any source.
+ * @return The source that was removed.
+ */
+- (id<ALSoundSource>) removeSource:(id<ALSoundSource>) source;
+
+/** Split the specified number of sources from this channel, creating a new
+ * channel.
+ *
+ * @param numSources The number of sources to split off
+ * @return A new channel with the split-off sources.
+ */
+- (ALChannelSource*) splitChannelWithSources:(int) numSources;
+
+/** Absorb another channel's sources into this one. All of the channel's sources
+ * will be moved into this channel.
+ *
+ * @param channel The channel to absorb sources from.
+ */
+- (void) addChannel:(ALChannelSource*) channel;
+
 
 @end

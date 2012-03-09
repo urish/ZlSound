@@ -4,27 +4,31 @@
 //
 //  Created by Karl Stenerud on 10-08-22.
 //
-// Copyright 2010 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
 
 #import "OALFunction.h"
+#import "ObjectALMacros.h"
 
 
 #pragma mark OALLinearFunction
@@ -155,28 +159,32 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALLogarithmicFunction);
 
 + (id) functionWithFunction:(id<OALFunction, NSObject>) function
 {
-	return [[[self alloc] initWithFunction:function] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithFunction:function]);
 }
 
 - (id) initWithFunction:(id<OALFunction, NSObject>) functionIn
 {
 	if(nil != (self = [super init]))
 	{
-		function = [functionIn retain];
+		function = arcsafe_retain(functionIn);
 	}
 	return self;
 }
 
 - (void) dealloc
 {
-	[function release];
-	[super dealloc];
+	arcsafe_release(function);
+    arcsafe_super_dealloc();
 }
 
 
 #pragma mark Properties
 
+// Compiler bug?
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wimplicit-atomic-properties"
 @synthesize function;
+#pragma clang diagnostic pop
 
 
 #pragma mark Function

@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 10-08-02.
 //
-// Copyright 2009 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -121,36 +124,4 @@
  */
 #ifndef OBJECTAL_CFG_LOG_LEVEL
 #define OBJECTAL_CFG_LOG_LEVEL LEVEL_WARNING
-#endif
-
-
-/** The CLANG/LLVM 1.5 compiler that ships with XCode 3.2.4 fails when compiling a method
- * which takes a struct and passes that struct or one of its components to a C function
- * from within a @@synchronized(self) context when compiling for the Device in Debug
- * configuration (Apple issue #8303765). <br>
- *
- * If this option is enabled, all synchronization will be disabled for methods which fall
- * under this category. <br>
- *
- * Note: This only takes effect if the CLANG compiler is used (__clang__ == 1) <br>
- *
- * Note: With XCode 3.2.5, this bug seems to be fixed. <br>
- *
- * Recommended setting: 1 for XCode 3.2.4, 0 for all other versions.
- */
-#ifndef OBJECTAL_CFG_CLANG_LLVM_BUG_WORKAROUND
-#define OBJECTAL_CFG_CLANG_LLVM_BUG_WORKAROUND 0
-#endif
-
-
-/** When this option is enabled, ObjectAL will invoke special code when playback ends for
- * any reason on the simulator.  This is to counter a bug where the simulator would mute
- * OpenAL playback when AVAudioPlayer playback ends. <br>
- *
- * Note: With XCode 3.2.3, this bug seems to be fixed. <br>
- *
- * Recommended setting: 0 for XCode 3.2.3 and later, 1 for earlier versions.
- */
-#ifndef OBJECTAL_CFG_SIMULATOR_BUG_WORKAROUND
-#define OBJECTAL_CFG_SIMULATOR_BUG_WORKAROUND 0
 #endif

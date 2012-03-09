@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 10-08-21.
 //
-// Copyright 2010 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -77,15 +80,15 @@
 
 + (id) operationWithTrack:(OALAudioTrack*) track url:(NSURL*) url seekTime:(NSTimeInterval)seekTime target:(id) target selector:(SEL) selector
 {
-	return [[[self alloc] initWithTrack:track url:url seekTime:seekTime target:target selector:selector] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithTrack:track url:url seekTime:seekTime target:target selector:selector]);
 }
 
 - (id) initWithTrack:(OALAudioTrack*) track url:(NSURL*) urlIn seekTime:(NSTimeInterval)seekTimeIn target:(id) targetIn selector:(SEL) selectorIn
 {
 	if(nil != (self = [super init]))
 	{
-		audioTrack = [track retain];
-		url = [urlIn retain];
+		audioTrack = arcsafe_retain(track);
+		url = arcsafe_retain(urlIn);
 		seekTime = seekTimeIn;
 		target = targetIn;
 		selector = selectorIn;
@@ -95,10 +98,9 @@
 
 - (void) dealloc
 {
-	[audioTrack release];
-	[url release];
-	
-	[super dealloc];
+	arcsafe_release(audioTrack);
+	arcsafe_release(url);
+    arcsafe_super_dealloc();
 }
 
 @end
@@ -144,7 +146,7 @@
 
 + (id) operationWithTrack:(OALAudioTrack*) track url:(NSURL*) url loops:(NSInteger) loops target:(id) target selector:(SEL) selector
 {
-	return [[[self alloc] initWithTrack:track url:url loops:loops target:target selector:selector] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithTrack:track url:url loops:loops target:target selector:selector]);
 }
 
 - (id) initWithTrack:(OALAudioTrack*) track url:(NSURL*) urlIn loops:(NSInteger) loopsIn target:(id) targetIn selector:(SEL) selectorIn
@@ -198,33 +200,6 @@
  */
 @interface OALAudioTrack (Private)
 
-/** (INTERNAL USE) Close any resources belonging to the OS.
- */
-- (void) closeOSResources;
-
-#if TARGET_IPHONE_SIMULATOR && OBJECTAL_CFG_SIMULATOR_BUG_WORKAROUND
-
-/** If the background music playback on the simulator ends (or is stopped), it mutes
- * OpenAL audio.  This method works around the issue by putting the player into looped
- * playback mode with volume set to 0 until the next instruction is received.
- */
-- (void) simulatorBugWorkaroundHoldPlayer;
-
-/** Part of the simulator bug workaround
- */
-- (void) simulatorBugWorkaroundRestorePlayer;
-
-
-#define SIMULATOR_BUG_WORKAROUND_PREPARE_PLAYBACK() [self simulatorBugWorkaroundRestorePlayer]
-#define SIMULATOR_BUG_WORKAROUND_END_PLAYBACK() [self simulatorBugWorkaroundHoldPlayer]
-
-#else /* TARGET_IPHONE_SIMULATOR && OBJECTAL_CFG_SIMULATOR_BUG_WORKAROUND */
-
-#define SIMULATOR_BUG_WORKAROUND_PREPARE_PLAYBACK()
-#define SIMULATOR_BUG_WORKAROUND_END_PLAYBACK()
-
-#endif /* TARGET_IPHONE_SIMULATOR && OBJECTAL_CFG_SIMULATOR_BUG_WORKAROUND */
-
 /** (INTERNAL USE) Called by SuspendHandler.
  */
 - (void) setSuspended:(bool) value;
@@ -240,7 +215,7 @@
 
 + (id) track
 {
-	return [[[self alloc] init] autorelease];
+	return arcsafe_autorelease([[self alloc] init]);
 }
 
 - (id) init
@@ -269,38 +244,19 @@
 	[[OALAudioTracks sharedInstance] removeSuspendListener:self];
 	[[OALAudioTracks sharedInstance] notifyTrackDeallocating:self];
 
-	[self closeOSResources];
+    player.delegate = nil;
+    [player stop];
 
-	[player release];
-	[operationQueue release];
-	[currentlyLoadedUrl release];
-	[simulatorPlayerRef release];
+	arcsafe_release(player);
+	arcsafe_release(operationQueue);
+	arcsafe_release(currentlyLoadedUrl);
+	arcsafe_release(simulatorPlayerRef);
 	[gainAction stopAction];
-	[gainAction release];
+	arcsafe_release(gainAction);
 	[panAction stopAction];
-	[panAction release];
-	[suspendHandler release];
-
-	[super dealloc];
-}
-
-- (void) closeOSResources
-{
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		if(nil != player)
-		{
-			player.delegate = nil;
-			[player stop];
-			[player release];
-			player = nil;
-		}
-	}
-}
-
-- (void) close
-{
-	[self closeOSResources];
+	arcsafe_release(panAction);
+	arcsafe_release(suspendHandler);
+	arcsafe_super_dealloc();
 }
 
 
@@ -350,9 +306,9 @@
 			pan = value;
 			player.pan = pan;
 		}
-		else
+		else if(pan != 0.0f)
 		{
-			OAL_LOG_WARNING_COND(pan != 0.0f, @"%@: Pan not supported on iOS %f", self, [IOSVersion sharedInstance].version);
+			OAL_LOG_WARNING(@"%@: Pan not supported on iOS %f", self, [IOSVersion sharedInstance].version);
 		}
 	}
 }
@@ -583,13 +539,13 @@
 		if(preloaded)
 		{
 			NSError* error;
-			[player release];
+			arcsafe_release(player);
 			player = [[AVAudioPlayer alloc] initWithContentsOfURL:currentlyLoadedUrl error:&error];
 			if(nil != error)
 			{
 				OAL_LOG_ERROR(@"%@: Could not reload URL %@: %@",
 							  self, currentlyLoadedUrl, [error localizedDescription]);
-				[player release];
+				arcsafe_release(player);
 				player = nil;
 				preloaded = NO;
 				playing = NO;
@@ -611,7 +567,7 @@
 			if(![player prepareToPlay])
 			{
 				OAL_LOG_ERROR(@"%@: Failed to prepareToPlay on resume: %@", self, currentlyLoadedUrl);
-				[player release];
+				arcsafe_release(player);
 				player = nil;
 				preloaded = NO;
 				playing = NO;
@@ -676,13 +632,12 @@
 
 		[self stopActions];
 		
-		SIMULATOR_BUG_WORKAROUND_PREPARE_PLAYBACK();
 		if(playing || paused)
 		{
 			[player stop];
 		}
 
-		[player release];
+		arcsafe_release(player);
 
 		if(wasPlaying)
 		{
@@ -706,8 +661,8 @@
 			player.pan = pan;
 		}
 		
-		[currentlyLoadedUrl release];
-		currentlyLoadedUrl = [url retain];
+		arcsafe_release(currentlyLoadedUrl);
+		currentlyLoadedUrl = arcsafe_retain(url);
 		
 		self.currentTime = seekTime;
 		playing = NO;
@@ -814,12 +769,14 @@
 	OPTIONALLY_SYNCHRONIZED(self)
 	{
 		[self stopActions];
-		SIMULATOR_BUG_WORKAROUND_PREPARE_PLAYBACK();
+        [player stop];
 		player.currentTime = currentTime;
 		player.volume = muted ? 0 : gain;
 		player.numberOfLoops = numberOfLoops;
 		paused = NO;
 		playing = [player play];
+        // Kick deviceCurrentTime so that it's valid next call
+        [self deviceCurrentTime];
 		if(playing)
 		{
 			[[NSNotificationCenter defaultCenter] performSelectorOnMainThread:@selector(postNotification:) withObject:[NSNotification notificationWithName:OALAudioTrackStartedPlayingNotification object:self] waitUntilDone:NO];
@@ -835,7 +792,7 @@
 		if([IOSVersion sharedInstance].version >= 4.0)
 		{
 			[self stopActions];
-			SIMULATOR_BUG_WORKAROUND_PREPARE_PLAYBACK();
+            [player stop];
 			player.currentTime = currentTime;
 			player.volume = muted ? 0 : gain;
 			player.numberOfLoops = numberOfLoops;
@@ -856,6 +813,19 @@
 	}
 }
 
+- (bool) playAfterTrack:(OALAudioTrack*) track
+{
+    return [self playAfterTrack:track timeAdjust:0];
+}
+
+- (bool) playAfterTrack:(OALAudioTrack*) track timeAdjust:(NSTimeInterval) timeAdjust
+{
+    NSTimeInterval deviceTime = track.deviceCurrentTime;
+    NSTimeInterval trackTimeRemaining = track.duration - track.currentTime;
+    return [self playAtTime:deviceTime + trackTimeRemaining + timeAdjust];
+}
+
+
 - (void) stop
 {
 	OPTIONALLY_SYNCHRONIZED(self)
@@ -869,7 +839,6 @@
 		
 		self.currentTime = 0;
 		player.currentTime = 0;
-		SIMULATOR_BUG_WORKAROUND_END_PLAYBACK();
 		paused = NO;
 		playing = NO;
 		preloaded = NO;
@@ -892,10 +861,11 @@
 	@synchronized(self)
 	{
 		[self stopFade];
-		gainAction = [[OALSequentialActions actions:
+		gainAction = [OALSequentialActions actions:
 					   [OALGainAction actionWithDuration:duration endValue:value],
 					   [OALCallAction actionWithCallTarget:target selector:selector withObject:self],
-					   nil] retain];
+					   nil];
+        arcsafe_retain_unused(gainAction);
 		[gainAction runWithTarget:self];
 	}
 }
@@ -906,7 +876,7 @@
 	@synchronized(self)
 	{
 		[gainAction stopAction];
-		[gainAction release];
+		arcsafe_release(gainAction);
 		gainAction = nil;
 	}
 }
@@ -922,10 +892,11 @@
 		@synchronized(self)
 		{
 			[self stopPan];
-			panAction = [[OALSequentialActions actions:
+			panAction = [OALSequentialActions actions:
 						  [OALPanAction actionWithDuration:duration endValue:value],
 						  [OALCallAction actionWithCallTarget:target selector:selector withObject:self],
-						  nil] retain];
+						  nil];
+            arcsafe_retain_unused(panAction);
 			[panAction runWithTarget:self];
 		}
 	}
@@ -939,7 +910,7 @@
 		@synchronized(self)
 		{
 			[panAction stopAction];
-			[panAction release];
+			arcsafe_release(panAction);
 			panAction = nil;
 		}
 	}
@@ -950,11 +921,11 @@
 	OPTIONALLY_SYNCHRONIZED(self)
 	{
 		[self stopActions];
-		[currentlyLoadedUrl release];
+		arcsafe_release(currentlyLoadedUrl);
 		currentlyLoadedUrl = nil;
 		
 		[player stop];
-		[player release];
+		arcsafe_release(player);
 		player = nil;
 		playing = NO;
 		paused = NO;
@@ -1060,7 +1031,6 @@
 		playing = NO;
 		paused = NO;
 		preloaded = NO;
-		SIMULATOR_BUG_WORKAROUND_END_PLAYBACK();
 		if(autoPreload)
 		{
 			preloaded = [player prepareToPlay];
@@ -1077,42 +1047,5 @@
 	
 	[[NSNotificationCenter defaultCenter] performSelectorOnMainThread:@selector(postNotification:) withObject:[NSNotification notificationWithName:OALAudioTrackFinishedPlayingNotification object:self] waitUntilDone:NO];
 }
-
-#pragma mark -
-#pragma mark Simulator playback bug handler
-
-#if TARGET_IPHONE_SIMULATOR && OBJECTAL_CFG_SIMULATOR_BUG_WORKAROUND
-
-- (void) simulatorBugWorkaroundRestorePlayer
-{
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		if(nil != simulatorPlayerRef)
-		{
-			player = simulatorPlayerRef;
-			simulatorPlayerRef = nil;
-			[player stop];
-			player.numberOfLoops = numberOfLoops;
-			player.volume = gain;
-		}
-	}
-}
-
-- (void) simulatorBugWorkaroundHoldPlayer
-{
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		if(nil != player)
-		{
-			player.volume = 0;
-			player.numberOfLoops = -1;
-			[player play];
-			simulatorPlayerRef = player;
-			player = nil;
-		}
-	}
-}
-
-#endif /* TARGET_IPHONE_SIMULATOR && OBJECTAL_CFG_SIMULATOR_BUG_WORKAROUND */
 
 @end

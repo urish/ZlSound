@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 10-01-14.
 //
-// Copyright 2009 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -42,10 +45,6 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_PROTOTYPE(OALSimpleAudio);
  */
 @interface OALSimpleAudio (Private)
 
-/** (INTERNAL USE) Close any resources belonging to the OS.
- */
-- (void) closeOSResources;
-
 /** (INTERNAL USE) Preload a sound effect and return the preloaded buffer.
  *
  * @param filePath The path containing the sound data.
@@ -66,10 +65,21 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_PROTOTYPE(OALSimpleAudio);
 
 SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 
+@synthesize device;
+@synthesize context;
 
 + (OALSimpleAudio*) sharedInstanceWithSources:(int) sources
 {
-	return [[[self alloc] initWithSources:sources] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithSources:sources]);
+}
+
++ (OALSimpleAudio*) sharedInstanceWithReservedSources:(int) reservedSources
+                                          monoSources:(int) monoSources
+                                        stereoSources:(int) stereoSources
+{
+    return arcsafe_autorelease([[self alloc] initWithReservedSources:reservedSources
+                                                         monoSources:monoSources
+                                                       stereoSources:stereoSources]);
 }
 
 - (id) init
@@ -77,26 +87,51 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 	return [self initWithSources:kDefaultReservedSources];
 }
 
-- (id) initWithSources:(int) sources
+- (void) initCommon:(int) reservedSources
+{
+    [OpenALManager sharedInstance].currentContext = context;
+    channel = [[ALChannelSource alloc] initWithSources:reservedSources];
+    
+    backgroundTrack = [[OALAudioTrack alloc] init];
+    
+#if NS_BLOCKS_AVAILABLE && OBJECTAL_USE_BLOCKS
+    oal_dispatch_queue	= dispatch_queue_create("objectal.simpleaudio.queue", NULL);
+#endif
+    pendingLoadCount	= 0;
+    
+    self.preloadCacheEnabled = YES;
+    self.bgVolume = 1.0f;
+    self.effectsVolume = 1.0f;
+}
+
+- (id) initWithReservedSources:(int) reservedSources
+                   monoSources:(int) monoSources
+                 stereoSources:(int) stereoSources
 {
 	if(nil != (self = [super init]))
 	{
-		OAL_LOG_DEBUG(@"%@: Init with %d sources", self, sources);
+		OAL_LOG_DEBUG(@"%@: Init with %d reserved sources, %d mono, %d stereo",
+                      self, reservedSources, monoSources, stereoSources);
 		device = [[ALDevice alloc] initWithDeviceSpecifier:nil];
-		context = [[ALContext alloc] initOnDevice:device attributes:nil];
-		[OpenALManager sharedInstance].currentContext = context;
-		channel = [[ALChannelSource alloc] initWithSources:sources];
-		
-		backgroundTrack = [[OALAudioTrack alloc] init];
-		
-#if NS_BLOCKS_AVAILABLE && OBJECTAL_USE_BLOCKS
-		oal_dispatch_queue	= dispatch_queue_create("objectal.simpleaudio.queue", NULL);
-#endif
-		pendingLoadCount	= 0;
+        context = [[ALContext alloc] initOnDevice:device
+                                  outputFrequency:44100
+                                 refreshIntervals:10
+                               synchronousContext:FALSE
+                                      monoSources:monoSources
+                                    stereoSources:stereoSources];
+        [self initCommon:reservedSources];
+	}
+	return self;
+}
 
-		self.preloadCacheEnabled = YES;
-		self.bgVolume = 1.0f;
-		self.effectsVolume = 1.0f;
+- (id) initWithSources:(int) reservedSources
+{
+	if(nil != (self = [super init]))
+	{
+		OAL_LOG_DEBUG(@"%@: Init with %d reserved sources", self, reservedSources);
+		device = [[ALDevice alloc] initWithDeviceSpecifier:nil];
+        context = [[ALContext alloc] initOnDevice:device attributes:nil];
+        [self initCommon:reservedSources];
 	}
 	return self;
 }
@@ -108,48 +143,13 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 	dispatch_release(oal_dispatch_queue);
 #endif
 	
-	[self closeOSResources];
-	
-	[backgroundTrack release];
+	arcsafe_release(backgroundTrack);
 	[channel stop];
-	[channel release];
-	[context release];
-	[device release];
-	[preloadCache release];
-	
-	[super dealloc];
-}
-
-- (void) closeOSResources
-{
-	// Not directly holding any OS resources.
-}
-
-- (void) close
-{
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		if(nil != backgroundTrack)
-		{
-			[backgroundTrack close];
-			[backgroundTrack release];
-			backgroundTrack = nil;
-
-			[channel close];
-			[channel release];
-			channel = nil;
-			
-			[context close];
-			[context release];
-			context = nil;
-			
-			[device close];
-			[device release];
-			device = nil;
-
-			[self closeOSResources];
-		}
-	}
+	arcsafe_release(channel);
+	arcsafe_release(context);
+	arcsafe_release(device);
+	arcsafe_release(preloadCache);
+	arcsafe_super_dealloc();
 }
 
 #pragma mark Properties
@@ -189,7 +189,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 				}
 				else
 				{
-					[preloadCache release];
+					arcsafe_release(preloadCache);
 					preloadCache = nil;
 				}
 			}
@@ -218,15 +218,17 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 }
 
 
-- (unsigned int) reservedSources
+- (int) reservedSources
 {
 	return channel.reservedSources;
 }
 
-- (void) setReservedSources:(unsigned int) value
+- (void) setReservedSources:(int) value
 {
 	channel.reservedSources = value;
 }
+
+@synthesize channel;
 
 @synthesize backgroundTrack;
 
@@ -454,13 +456,13 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 			OAL_LOG_ERROR(@"Could not load effect %@", filePath);
 			return nil;
 		}
-
+        
 		OPTIONALLY_SYNCHRONIZED(self)
 		{
 			[preloadCache setObject:buffer forKey:filePath];
 		}
 	}
-
+    
 	return buffer;
 }
 
@@ -476,9 +478,12 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 		OAL_LOG_ERROR(@"filePath was NULL");
 		return nil;
 	}
-
-	OAL_LOG_WARNING_COND(pendingLoadCount > 0, @"You are loading an effect synchronously, but have pending async loads that have not completed. Your load will happen after those finish. Your thread is now stuck waiting. Next time just load everything async please.");
-
+    
+    if(pendingLoadCount > 0)
+    {
+        OAL_LOG_WARNING(@"You are loading an effect synchronously, but have pending async loads that have not completed. Your load will happen after those finish. Your thread is now stuck waiting. Next time just load everything async please.");
+    }
+    
 #if NS_BLOCKS_AVAILABLE && OBJECTAL_USE_BLOCKS
 	//Using blocks with the same queue used to asynch load removes the need for locking
 	//BUT be warned that if you had called preloadEffects and then called this method, your app will stall until all of the loading is done.
@@ -486,9 +491,9 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 	__block ALBuffer* retBuffer = nil;
 	pendingLoadCount++;
 	dispatch_sync(oal_dispatch_queue,
-	^{
-		retBuffer = [self internalPreloadEffect:filePath reduceToMono:reduceToMono];
-	});
+                  ^{
+                      retBuffer = [self internalPreloadEffect:filePath reduceToMono:reduceToMono];
+                  });
 	pendingLoadCount--;
 	return retBuffer;
 #else
@@ -499,8 +504,8 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 #if NS_BLOCKS_AVAILABLE && OBJECTAL_USE_BLOCKS
 
 - (BOOL) preloadEffect:(NSString*) filePath
-				  reduceToMono:(bool) reduceToMono
-			completionBlock:(void(^)(ALBuffer *)) completionBlock
+          reduceToMono:(bool) reduceToMono
+       completionBlock:(void(^)(ALBuffer *)) completionBlock
 {
 	if(nil == filePath)
 	{
@@ -511,25 +516,25 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 	
 	pendingLoadCount++;
 	dispatch_async(oal_dispatch_queue,
-	^{
-		OAL_LOG_INFO(@"Preloading effect: %@", filePath);
-		
-		ALBuffer *retBuffer = [self internalPreloadEffect:filePath reduceToMono:reduceToMono];
-		if(!retBuffer)
-		{
-			 OAL_LOG_WARNING(@"%@ failed to preload.", filePath);
-		}
-		dispatch_async(dispatch_get_main_queue(),
-		^{
-			completionBlock(retBuffer);
-			pendingLoadCount--;
-		});
-	});
+                   ^{
+                       OAL_LOG_INFO(@"Preloading effect: %@", filePath);
+                       
+                       ALBuffer *retBuffer = [self internalPreloadEffect:filePath reduceToMono:reduceToMono];
+                       if(!retBuffer)
+                       {
+                           OAL_LOG_WARNING(@"%@ failed to preload.", filePath);
+                       }
+                       dispatch_async(dispatch_get_main_queue(),
+                                      ^{
+                                          completionBlock(retBuffer);
+                                          pendingLoadCount--;
+                                      });
+                   });
 	return YES;
 }
 
 - (void) preloadEffects:(NSArray*) filePaths
-				   reduceToMono:(bool) reduceToMono
+           reduceToMono:(bool) reduceToMono
 		  progressBlock:(void (^)(uint progress, uint successCount, uint total)) progressBlock
 {
 	uint total					= [filePaths count];
@@ -544,54 +549,95 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 	
 	pendingLoadCount			+= total;
 	dispatch_async(oal_dispatch_queue,
-	^{
-		[filePaths enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop)
-		 {
-			 OAL_LOG_INFO(@"Preloading effect: %@", obj);
-			 ALBuffer *result = [self internalPreloadEffect:(NSString *)obj reduceToMono:reduceToMono];
-			 if(!result)
-			 {
-				 OAL_LOG_WARNING(@"%@ failed to preload.", obj);
-			 }
-			 else
-			 {
-				 successCount++;
-			 }
-			 uint cnt = idx+1;
-			 dispatch_async(dispatch_get_main_queue(), 
-			 ^{
-				 if(cnt == total)
-				 {
-					 pendingLoadCount		-= total;
-				 }
-				 progressBlock(cnt, successCount, total);
-			 });
-		 }];
-	});
+                   ^{
+                       [filePaths enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop)
+                        {
+                            OAL_LOG_INFO(@"Preloading effect: %@", obj);
+                            ALBuffer *result = [self internalPreloadEffect:(NSString *)obj reduceToMono:reduceToMono];
+                            if(!result)
+                            {
+                                OAL_LOG_WARNING(@"%@ failed to preload.", obj);
+                            }
+                            else
+                            {
+                                successCount++;
+                            }
+                            uint cnt = idx+1;
+                            dispatch_async(dispatch_get_main_queue(), 
+                                           ^{
+                                               if(cnt == total)
+                                               {
+                                                   pendingLoadCount		-= total;
+                                               }
+                                               progressBlock(cnt, successCount, total);
+                                           });
+                        }];
+                   });
 }
 #endif
 
-- (void) unloadEffect:(NSString*) filePath
+- (bool) unloadEffect:(NSString*) filePath
 {
 	if(nil == filePath)
 	{
 		OAL_LOG_ERROR(@"filePath was NULL");
-		return;
+		return NO;
 	}
+    NSString* name = [[OALTools urlForPath:filePath] description];
 	OAL_LOG_DEBUG(@"Remove effect from cache: %@", filePath);
+    bool isSuccess = YES;
 	OPTIONALLY_SYNCHRONIZED(self)
 	{
-		[preloadCache removeObjectForKey:filePath];
+        for(ALSource* source in channel.sourcePool.sources)
+        {
+            if([source.buffer.name isEqualToString:name])
+            {
+                if(source.playing)
+                {
+                    isSuccess = NO;
+                }
+                else
+                {
+                    source.buffer = nil;
+                }
+            }
+        }
+        if(isSuccess)
+        {
+            [preloadCache removeObjectForKey:filePath];
+        }
 	}
+    if(!isSuccess)
+    {
+        OAL_LOG_DEBUG(@"Could not remove effect from cache because it is still playing: %@", filePath);
+    }
+    return isSuccess;
 }
 
 - (void) unloadAllEffects
 {
+    OAL_LOG_DEBUG(@"Remove all effects from cache");
+    NSMutableDictionary* stillPlaying = [NSMutableDictionary dictionary];
 	OPTIONALLY_SYNCHRONIZED(self)
 	{
-		OAL_LOG_DEBUG(@"Remove all effects from cache");
+        for(ALSource* source in channel.sourcePool.sources)
+        {
+            if(source.playing && source.buffer != nil)
+            {
+                [stillPlaying setObject:source.buffer forKey:source.buffer.name];
+            }
+            else
+            {
+                source.buffer = nil;
+            }
+        }
 		[preloadCache removeAllObjects];
+        [preloadCache addEntriesFromDictionary:stillPlaying];
 	}
+    if([stillPlaying count] > 0)
+    {
+        OAL_LOG_DEBUG(@"The following effects were still playing: %@", stillPlaying);
+    }
 }
 
 - (id<ALSoundSource>) playEffect:(NSString*) filePath

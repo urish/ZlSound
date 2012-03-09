@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 10-08-02.
 //
-// Copyright 2009 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -61,6 +64,26 @@
 
 
 #pragma mark -
+#pragma mark ARC
+
+#if __has_feature(objc_arc)
+    #define arcsafe_retain(X) (X)
+    #define arcsafe_retain_unused(X)
+    #define arcsafe_release(X)
+    #define arcsafe_super_dealloc()
+    #define arcsafe_autorelease(X) (X)
+    #define arcsafe_autorelease_unused(X)
+#else
+    #define arcsafe_retain(X) [(X) retain]
+    #define arcsafe_retain_unused(X) [(X) retain]
+    #define arcsafe_release(X) [(X) release]
+    #define arcsafe_super_dealloc() [super dealloc]
+    #define arcsafe_autorelease(X) [(X) autorelease]
+    #define arcsafe_autorelease_unused(X) [(X) autorelease]
+#endif
+
+
+#pragma mark -
 #pragma mark Synchronization
 
 #if OBJECTAL_CFG_SYNCHRONIZED_OPERATIONS
@@ -72,20 +95,6 @@
 #define OPTIONALLY_SYNCHRONIZED(A)
 
 #endif /* OBJECTAL_CFG_SYNCHRONIZED_OPERATIONS */
-
-
-#pragma mark -
-#pragma mark LLVM Bug Workaround
-
-#if OBJECTAL_CFG_CLANG_LLVM_BUG_WORKAROUND && __clang__
-
-#define OPTIONALLY_SYNCHRONIZED_STRUCT_OP(A)
-
-#else
-
-#define OPTIONALLY_SYNCHRONIZED_STRUCT_OP(A) OPTIONALLY_SYNCHRONIZED(A)
-
-#endif /* OBJECTAL_CFG_CLANG_LLVM_BUG_WORKAROUND */
 
 
 #pragma mark -
@@ -105,13 +114,6 @@
 #define OAL_LOG_BASE(FMT_STRING, CONTEXT, FMT, ...)	\
 	NSLog(FMT_STRING, (CONTEXT), [NSString stringWithFormat:(FMT), ##__VA_ARGS__])
 
-#define OAL_LOG_BASE_COND(COND, FMT_STRING, CONTEXT, FMT, ...)	\
-	if(COND) \
-	{ \
-		NSLog(FMT_STRING, (CONTEXT), [NSString stringWithFormat:(FMT), ##__VA_ARGS__]); \
-	}
-
-
 /** Write a "Debug" log entry.
  *
  * @param FMT Message with NSLog() style formatting.
@@ -119,10 +121,8 @@
  */
 #if OBJECTAL_CFG_LOG_LEVEL >= 4
 #define OAL_LOG_DEBUG(FMT, ...) OAL_LOG_BASE(@"OAL Debug: %s: %@", __PRETTY_FUNCTION__, FMT, ##__VA_ARGS__)
-#define OAL_LOG_DEBUG_COND(COND, FMT, ...) OAL_LOG_BASE_COND(COND, @"OAL Debug: %s: %@", __PRETTY_FUNCTION__, FMT, ##__VA_ARGS__)
 #else /* OBJECTAL_CFG_LOG_LEVEL */
 #define OAL_LOG_DEBUG(FMT, ...)
-#define OAL_LOG_DEBUG_COND(COND, FMT, ...)
 #endif /* OBJECTAL_CFG_LOG_LEVEL */
 
 /** Write an "Info" log entry.
@@ -132,10 +132,8 @@
  */
 #if OBJECTAL_CFG_LOG_LEVEL >= 3
 #define OAL_LOG_INFO(FMT, ...) OAL_LOG_BASE(@"OAL Info: %s: %@", __PRETTY_FUNCTION__, FMT, ##__VA_ARGS__)
-#define OAL_LOG_INFO_COND(COND, FMT, ...) OAL_LOG_BASE_COND(COND, @"OAL Info: %s: %@", __PRETTY_FUNCTION__, FMT, ##__VA_ARGS__)
 #else /* OBJECTAL_CFG_LOG_LEVEL */
 #define OAL_LOG_INFO(FMT, ...)
-#define OAL_LOG_INFO_COND(COND, FMT, ...)
 #endif /* OBJECTAL_CFG_LOG_LEVEL */
 
 /** Write a "Warning" log entry.
@@ -145,10 +143,8 @@
  */
 #if OBJECTAL_CFG_LOG_LEVEL >= 2
 #define OAL_LOG_WARNING(FMT, ...) OAL_LOG_BASE(@"OAL Warning: %s: %@", __PRETTY_FUNCTION__, FMT, ##__VA_ARGS__)
-#define OAL_LOG_WARNING_COND(COND, FMT, ...) OAL_LOG_BASE_COND(COND, @"OAL Warning: %s: %@", __PRETTY_FUNCTION__, FMT, ##__VA_ARGS__)
 #else /* OBJECTAL_CFG_LOG_LEVEL */
 #define OAL_LOG_WARNING(FMT, ...)
-#define OAL_LOG_WARNING_COND(COND, FMT, ...)
 #endif /* OBJECTAL_CFG_LOG_LEVEL */
 
 /** Write an "Error" log entry.
@@ -158,10 +154,8 @@
  */
 #if OBJECTAL_CFG_LOG_LEVEL >= 1
 #define OAL_LOG_ERROR(FMT, ...) OAL_LOG_BASE(@"OAL Error: %s: %@", __PRETTY_FUNCTION__, FMT, ##__VA_ARGS__)
-#define OAL_LOG_ERROR_COND(COND, FMT, ...) OAL_LOG_BASE_COND(COND, @"OAL Error: %s: %@", __PRETTY_FUNCTION__, FMT, ##__VA_ARGS__)
 #else /* OBJECTAL_CFG_LOG_LEVEL */
 #define OAL_LOG_ERROR(FMT, ...)
-#define OAL_LOG_ERROR_COND(COND, FMT, ...)
 #endif /* OBJECTAL_CFG_LOG_LEVEL */
 
 /** Write an "Error" log entry with context.
@@ -173,7 +167,7 @@
 #if OBJECTAL_CFG_LOG_LEVEL >= 1
 #define OAL_LOG_ERROR_CONTEXT(CONTEXT, FMT, ...) OAL_LOG_BASE(@"OAL Error: %s: %@", CONTEXT, FMT, ##__VA_ARGS__)
 #else /* OBJECTAL_CFG_LOG_LEVEL */
-#define OAL_LOG_ERROR_CONTEXT(FMT, ...)
+#define OAL_LOG_ERROR_CONTEXT(CONTEXT, FMT, ...)
 #endif /* OBJECTAL_CFG_LOG_LEVEL */
 
 #pragma mark -

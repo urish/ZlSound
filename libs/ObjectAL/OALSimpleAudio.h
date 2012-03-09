@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 10-01-14.
 //
-// Copyright 2009 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -127,13 +130,22 @@
 @property(readwrite,assign) bool honorSilentSwitch;
 
 /** The number of sources OALSimpleAudio is using (max 32 on current iOS devices). */
-@property(readwrite,assign) unsigned int reservedSources;
+@property(readwrite,assign) int reservedSources;
+
+@property(nonatomic,readonly) ALDevice* device;
+
+@property(nonatomic,readonly) ALContext* context;
+
+/** The channel source used by OALSimpleAudio.
+ * Only mess with this if you know what you are doing!
+ */
+@property(nonatomic,readonly) ALChannelSource* channel;
 
 /** Background audio URL */
-@property(readonly) NSURL* backgroundTrackURL;
+@property(nonatomic,readonly) NSURL* backgroundTrackURL;
 
 /** Background audio track */
-@property(readonly) OALAudioTrack* backgroundTrack;
+@property(nonatomic,readonly) OALAudioTrack* backgroundTrack;
 
 /** Pauses BG music playback */
 @property(readwrite,assign) bool bgPaused;
@@ -142,7 +154,7 @@
 @property(readwrite,assign) bool bgMuted;
 
 /** If true, BG music is currently playing */
-@property(readonly) bool bgPlaying;
+@property(nonatomic,readonly) bool bgPlaying;
 
 /** Background music playback gain/volume (0.0 - 1.0) */
 @property(readwrite,assign) float bgVolume;
@@ -169,16 +181,16 @@
 @property(readwrite,assign) bool preloadCacheEnabled;
 
 /** The number of items currently in the preload cache. */
-@property(readonly) NSUInteger preloadCacheCount;
+@property(nonatomic,readonly) NSUInteger preloadCacheCount;
 
 /** Set to YES to manually suspend the sound system. */
 @property(readwrite,assign) bool manuallySuspended;
 
 /** If YES, the sound system is interrupted. */
-@property(readonly) bool interrupted;
+@property(nonatomic,readonly) bool interrupted;
 
 /** If YES, the sound system is suspended. */
-@property(readonly) bool suspended;
+@property(nonatomic,readonly) bool suspended;
 
 
 
@@ -203,17 +215,50 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_HEADER(OALSimpleAudio);
  */
 + (OALSimpleAudio*) sharedInstanceWithSources:(int) sources;
 
-/** (INTERNAL USE) Initialize with the specified number of reserved sources.
+/** Start OALSimpleAudio with the specified parameters.
  *
- * @param sources the number of sources to reserve when initializing.
+ * With this initializer, you can set the total number of mono and stereo sources
+ * available, as well as how many sources are to be reserved by OALSimpleAudio. <br>
+ *
+ * The number of mono and stereo sources represents the GLOBAL number of sources
+ * available for EVERYONE, not just OALSimpleAudio. Their combined values must
+ * not exceed 32 (the max allowed sources in iOS). <br>
+ *
+ * reservedSources is independent of this; it represents how many of the above
+ * mentioned sources to reserve for OALSimpleAudio's use. <br>
+ * 
+ * <strong>Note:</strong> This method must be called ONLY ONCE, <em>BEFORE</em>
+ * any attempt is made to access the shared instance. <br>
+ *
+ * @param reservedSources The number of sources to reserve for OALSimpleAudio's
+ *                        use when initializing.
+ *                        iOS currently supports up to 32 sources total.
+ * @param monoSources The GLOBAL number of sources supporting mono (default 28).
+ * @param stereoSources The GLOBAL number of sources supporting stereo (default 4).
+ *
  * @return The shared instance.
  */
-- (id) initWithSources:(int) sources;
++ (OALSimpleAudio*) sharedInstanceWithReservedSources:(int) reservedSources
+                                          monoSources:(int) monoSources
+                                        stereoSources:(int) stereoSources;
 
-/** Close any OS resources in use by this object.
- * Any operations called on this object after closing will likely fail.
+/** (INTERNAL USE) Initialize with the specified number of reserved sources.
+ *
+ * @param reservedSources the number of sources to reserve when initializing.
+ * @return The shared instance.
  */
-- (void) close;
+- (id) initWithSources:(int) reservedSources;
+
+/** (INTERNAL USE) Initialize with the specified parameters.
+ *
+ * @param reservedSources The number of sources to reserve for OALSimpleAudio's use when initializing.
+ * @param monoSources The GLOBAL number of sources supporting mono (default 28).
+ * @param stereoSources The GLOBAL number of sources supporting stereo (default 4).
+ * @return The shared instance.
+ */
+- (id) initWithReservedSources:(int) reservedSources
+                   monoSources:(int) monoSources
+                 stereoSources:(int) stereoSources;
 
 
 #pragma mark Background Music
@@ -355,13 +400,18 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_HEADER(OALSimpleAudio);
 
 #endif
 
-/** Unload a preloaded effect.
+/** Unload a preloaded effect. Only unloads if no source is currently playing
+ * that effect (or paused with the effect loaded).
  *
  * @param filePath The path containing the sound data that was previously loaded.
+ *
+ * @return YES if the effect was unloaded. Turn on debug logging to see why an
+ *         effect was not unloaded.
  */
-- (void) unloadEffect:(NSString*) filePath;
+- (bool) unloadEffect:(NSString*) filePath;
 
-/** Unload all preloaded effects.
+/** Unload all preloaded effects that are not currently being played (paused or not).
+ * Turning on debug logging will show which effects were not unloaded.
  * It is useful to put a call to this method in
  * "applicationDidReceiveMemoryWarning" in your app delegate.
  */

@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 10-01-09.
 //
-// Copyright 2009 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -40,10 +43,6 @@
  */
 @interface ALContext (Private)
 
-/** (INTERNAL USE) Close any resources belonging to the OS.
- */
-- (void) closeOSResources;
-
 /** (INTERNAL USE) Called by SuspendHandler.
  */
 - (void) setSuspended:(bool) value;
@@ -57,7 +56,7 @@
 
 + (id) contextOnDevice:(ALDevice *) device attributes:(NSArray*) attributes
 {
-	return [[[self alloc] initOnDevice:device attributes:attributes] autorelease];
+	return arcsafe_autorelease([[self alloc] initOnDevice:device attributes:attributes]);
 }
 
 + (id) contextOnDevice:(ALDevice*) device
@@ -139,7 +138,7 @@
 		if(nil == deviceIn)
 		{
 			OAL_LOG_ERROR(@"%@: Failed to init because device was nil. Returning nil", self);
-			[self release];
+			arcsafe_release(self);
 			return nil;
 		}
 
@@ -159,7 +158,7 @@
 		}
 		
 		// Notify the device that we are being created.
-		device = [deviceIn retain];
+		device = arcsafe_retain(deviceIn);
 		[device notifyContextInitializing:self];
 
 		// Open the context with our list of attributes.
@@ -167,7 +166,7 @@
 		
 		listener = [[ALListener alloc] initWithContext:self];
 		
-		sources = mutant(32);
+		sources = [NSMutableArray newMutableArrayUsingWeakReferencesWithCapacity:32];
 		
 		// Cache all attributes for this context.
 		attributes = [[NSMutableArray alloc] initWithCapacity:5];
@@ -178,7 +177,7 @@
 			{
 				free(attributesList);
 			}
-			attributesList = malloc(sizeof(ALCint) * buffSize);
+			attributesList = malloc(sizeof(ALCint) * (unsigned long)buffSize);
 			if([ALWrapper getIntegerv:device.device attribute:ALC_ALL_ATTRIBUTES size:buffSize data:attributesList])
 			{
 				for(int i = 0; i < buffSize; i++)
@@ -211,46 +210,18 @@
 	[device removeSuspendListener:self];
 	[device notifyContextDeallocating:self];
 
-	[self closeOSResources];
-	
-	[sources release];
-	[listener release];
-	[device release];
-	[attributes release];
-	[suspendHandler release];
+    if([OpenALManager sharedInstance].currentContext == self)
+    {
+        [OpenALManager sharedInstance].currentContext = nil;
+    }
+    [ALWrapper destroyContext:context];
 
-	[super dealloc];
-}
-
-- (void) closeOSResources
-{
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		if(nil != context)
-		{
-			if([OpenALManager sharedInstance].currentContext == self)
-			{
-				[OpenALManager sharedInstance].currentContext = nil;
-			}
-			[ALWrapper destroyContext:context];
-			context = nil;
-		}
-	}
-}
-
-- (void) close
-{
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		if(nil != context)
-		{
-			[sources makeObjectsPerformSelector:@selector(close)];
-			[sources release];
-			sources = nil;
-			
-			[self closeOSResources];
-		}
-	}
+	arcsafe_release(sources);
+	arcsafe_release(listener);
+	arcsafe_release(device);
+	arcsafe_release(attributes);
+	arcsafe_release(suspendHandler);
+	arcsafe_super_dealloc();
 }
 
 

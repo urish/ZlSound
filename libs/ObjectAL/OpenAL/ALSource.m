@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 15/12/09.
 //
-// Copyright 2009 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -30,6 +33,7 @@
 #import "OpenALManager.h"
 #import "OALAudioActions.h"
 #import "OALUtilityActions.h"
+#import <OpenAL/oalMacOSX_OALExtensions.h>
 
 
 #pragma mark -
@@ -39,10 +43,6 @@
  * (INTERNAL USE) Private methods for ALSource.
  */
 @interface ALSource (Private)
-
-/** (INTERNAL USE) Close any resources belonging to the OS.
- */
-- (void) closeOSResources;
 
 /** (INTERNAL USE) Called by SuspendHandler.
  */
@@ -63,12 +63,12 @@
 
 + (id) source
 {
-	return [[[self alloc] init] autorelease];
+	return arcsafe_autorelease([[self alloc] init]);
 }
 
 + (id) sourceOnContext:(ALContext*) context
 {
-	return [[[self alloc] initOnContext:context] autorelease];
+	return arcsafe_autorelease([[self alloc] initOnContext:context]);
 }
 
 - (id) init
@@ -85,13 +85,13 @@
 		if(nil == contextIn)
 		{
 			OAL_LOG_ERROR(@"%@: Failed to init because context was nil. Returning nil", self);
-			[self release];
+			arcsafe_release(self);
 			return nil;
 		}
 		
 		suspendHandler = [[OALSuspendHandler alloc] initWithTarget:self selector:@selector(setSuspended:)];
 
-		context = [contextIn retain];
+		context = arcsafe_retain(contextIn);
 		@synchronized([OpenALManager sharedInstance])
 		{
 			ALContext* realContext = [OpenALManager sharedInstance].currentContext;
@@ -103,6 +103,7 @@
 
 		[context notifySourceInitializing:self];
 		gain = [ALWrapper getSourcef:sourceId parameter:AL_GAIN];
+		shadowState = AL_INITIAL;
 		
 		[context addSuspendListener:self];
 	}
@@ -115,55 +116,44 @@
 
 	[context removeSuspendListener:self];
 	[context notifySourceDeallocating:self];
-
-	[self closeOSResources];
 	
 	[gainAction stopAction];
-	[gainAction release];
+	arcsafe_release(gainAction);
 	[panAction stopAction];
-	[panAction release];
+	arcsafe_release(panAction);
 	[pitchAction stopAction];
-	[pitchAction release];
-	[suspendHandler release];
-	[context release];
+	arcsafe_release(pitchAction);
+	arcsafe_release(suspendHandler);
+
+    if((ALuint)AL_INVALID != sourceId)
+    {
+        [ALWrapper sourceStop:sourceId];
+        [ALWrapper sourcei:sourceId parameter:AL_BUFFER value:AL_NONE];
+        
+        @synchronized([OpenALManager sharedInstance])
+        {
+            ALContext* currentContext = [OpenALManager sharedInstance].currentContext;
+            if(currentContext != context)
+            {
+                // Make this source's context the current one if it isn't already.
+                [OpenALManager sharedInstance].currentContext = context;
+            }
+            
+            [ALWrapper deleteSource:sourceId];
+            
+            [OpenALManager sharedInstance].currentContext = currentContext;
+        }
+    }
+
+	arcsafe_release(context);
 
 	// In IOS 3.x, OpenAL doesn't stop playing right away.
 	// Release after a delay to give it some time to stop.
+#if !__has_feature(objc_arc)
 	[buffer performSelector:@selector(release) withObject:nil afterDelay:0.1];
+#endif
 	
-	[super dealloc];
-}
-
-- (void) closeOSResources
-{
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		if((ALuint)AL_INVALID != sourceId)
-		{
-			[ALWrapper sourceStop:sourceId];
-			[ALWrapper sourcei:sourceId parameter:AL_BUFFER value:AL_NONE];
-			
-			@synchronized([OpenALManager sharedInstance])
-			{
-				ALContext* realContext = [OpenALManager sharedInstance].currentContext;
-				if(realContext != context)
-				{
-					// Make this source's context the current one if it isn't already.
-					[OpenALManager sharedInstance].currentContext = context;
-				}
-
-				[ALWrapper deleteSource:sourceId];
-				
-				[OpenALManager sharedInstance].currentContext = realContext;
-			}
-			sourceId = (ALuint)AL_INVALID;
-		}
-	}
-}
-
-- (void) close
-{
-	[self closeOSResources];
+	arcsafe_super_dealloc();
 }
 
 
@@ -191,10 +181,12 @@
 
 		// In IOS 3.x, OpenAL doesn't stop playing right away.
 		// Release after a delay to give it some time to stop.
+#if !__has_feature(objc_arc)
 		[buffer performSelector:@selector(release) withObject:nil afterDelay:0.1];
+#endif
 
-		buffer = [value retain];
-		[ALWrapper sourcei:sourceId parameter:AL_BUFFER value:buffer.bufferId];
+		buffer = arcsafe_retain(value);
+		[ALWrapper sourcei:sourceId parameter:AL_BUFFER value:(ALint)buffer.bufferId];
 	}
 }
 
@@ -288,7 +280,7 @@
 
 - (void) setDirection:(ALVector) value
 {
-	OPTIONALLY_SYNCHRONIZED_STRUCT_OP(self)
+	OPTIONALLY_SYNCHRONIZED(self)
 	{
 		if(self.suspended)
 		{
@@ -337,7 +329,11 @@
 	}
 }
 
+// Compiler bug?
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wimplicit-atomic-properties"
 @synthesize interruptible;
+#pragma clang diagnostic pop
 
 - (bool) looping
 {
@@ -541,35 +537,30 @@
 			return;
 		}
 		
-		int newState = 0;
-		
 		if(shouldPause)
 		{
-			abortPlaybackResume = YES;
-			newState = AL_PAUSED;
 			if(AL_PLAYING == self.state)
 			{
-				if(![ALWrapper sourcePause:sourceId])
+                abortPlaybackResume = YES;
+				if([ALWrapper sourcePause:sourceId])
 				{
-					newState = 0;
+					shadowState = AL_PAUSED;
 				}
 			}
 		}
 		else
 		{
-			newState = AL_PLAYING;
 			if(AL_PAUSED == self.state)
 			{
-				if(![ALWrapper sourcePlay:sourceId])
+				if([ALWrapper sourcePlay:sourceId])
+                {
+                    shadowState = AL_PLAYING;
+                }
+                else
 				{
-					newState = AL_STOPPED;
+					shadowState = AL_STOPPED;
 				}
 			}
-		}
-		
-		if(0 != newState)
-		{
-			shadowState = newState;
 		}
 	}
 }
@@ -617,7 +608,7 @@
 
 - (void) setPosition:(ALPoint) value
 {
-	OPTIONALLY_SYNCHRONIZED_STRUCT_OP(self)
+	OPTIONALLY_SYNCHRONIZED(self)
 	{
 		if(self.suspended)
 		{
@@ -781,7 +772,7 @@
 
 - (void) setVelocity:(ALVector) value
 {
-	OPTIONALLY_SYNCHRONIZED_STRUCT_OP(self)
+	OPTIONALLY_SYNCHRONIZED(self)
 	{
 		if(self.suspended)
 		{
@@ -790,6 +781,72 @@
 		}
 		
 		[ALWrapper source3f:sourceId parameter:AL_VELOCITY v1:value.x v2:value.y v3:value.z];
+	}
+}
+
+- (float) reverbSendLevel
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+		return [ALWrapper asaGetSourcef:sourceId property:ALC_ASA_REVERB_SEND_LEVEL];
+	}
+}
+
+- (void) setReverbSendLevel:(float) reverbSendLevel
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+		if(self.suspended)
+		{
+			OAL_LOG_DEBUG(@"%@: Called mutator on suspended object", self);
+			return;
+		}
+		
+		[ALWrapper asaSourcef:sourceId property:ALC_ASA_REVERB_SEND_LEVEL value:reverbSendLevel];
+	}
+}
+
+- (float) reverbOcclusion
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+		return [ALWrapper asaGetSourcef:sourceId property:ALC_ASA_OCCLUSION];
+	}
+}
+
+- (void) setReverbOcclusion:(float) reverbOcclusion
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+		if(self.suspended)
+		{
+			OAL_LOG_DEBUG(@"%@: Called mutator on suspended object", self);
+			return;
+		}
+		
+		[ALWrapper asaSourcef:sourceId property:ALC_ASA_OCCLUSION value:reverbOcclusion];
+	}
+}
+
+- (float) reverbObstruction
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+		return [ALWrapper asaGetSourcef:sourceId property:ALC_ASA_OBSTRUCTION];
+	}
+}
+
+- (void) setReverbObstruction:(float) reverbObstruction
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+		if(self.suspended)
+		{
+			OAL_LOG_DEBUG(@"%@: Called mutator on suspended object", self);
+			return;
+		}
+		
+		[ALWrapper asaSourcef:sourceId property:ALC_ASA_OBSTRUCTION value:reverbObstruction];
 	}
 }
 
@@ -1056,10 +1113,11 @@
 		}
 		
 		[self stopFade];
-		gainAction = [[OALSequentialActions actions:
+		gainAction = [OALSequentialActions actions:
 					   [OALGainAction actionWithDuration:duration endValue:value],
 					   [OALCallAction actionWithCallTarget:target selector:selector withObject:self],
-					   nil] retain];
+					   nil];
+        arcsafe_retain_unused(gainAction);
 		[gainAction runWithTarget:self];
 	}
 }
@@ -1076,7 +1134,7 @@
 		}
 		
 		[gainAction stopAction];
-		[gainAction release];
+		arcsafe_release(gainAction);
 		gainAction = nil;
 	}
 }
@@ -1096,11 +1154,12 @@
 		}
 		
 		[self stopPan];
-		gainAction = [[OALSequentialActions actions:
+		panAction = [OALSequentialActions actions:
 					   [OALPanAction actionWithDuration:duration endValue:value],
 					   [OALCallAction actionWithCallTarget:target selector:selector withObject:self],
-					   nil] retain];
-		[gainAction runWithTarget:self];
+					   nil];
+        arcsafe_retain_unused(panAction);
+		[panAction runWithTarget:self];
 	}
 }
 
@@ -1115,9 +1174,9 @@
 			return;
 		}
 		
-		[gainAction stopAction];
-		[gainAction release];
-		gainAction = nil;
+		[panAction stopAction];
+		arcsafe_release(panAction);
+		panAction = nil;
 	}
 }
 
@@ -1136,11 +1195,12 @@
 		}
 		
 		[self stopPitch];
-		gainAction = [[OALSequentialActions actions:
+		pitchAction = [OALSequentialActions actions:
 					   [OALPitchAction actionWithDuration:duration endValue:value],
 					   [OALCallAction actionWithCallTarget:target selector:selector withObject:self],
-					   nil] retain];
-		[gainAction runWithTarget:self];
+					   nil];
+        arcsafe_retain_unused(pitchAction);
+		[pitchAction runWithTarget:self];
 	}
 }
 
@@ -1155,9 +1215,9 @@
 			return;
 		}
 		
-		[gainAction stopAction];
-		[gainAction release];
-		gainAction = nil;
+		[pitchAction stopAction];
+		arcsafe_release(pitchAction);
+		pitchAction = nil;
 	}
 }
 
@@ -1183,24 +1243,10 @@
 
 - (bool) queueBuffer:(ALBuffer*) bufferIn
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		if(self.suspended)
-		{
-			OAL_LOG_DEBUG(@"%@: Called mutator on suspended object", self);
-			return NO;
-		}
-		
-		if(AL_STATIC == self.state)
-		{
-			self.buffer = nil;
-		}
-		ALuint bufferId = bufferIn.bufferId;
-		return [ALWrapper sourceQueueBuffers:sourceId numBuffers:1 bufferIds:&bufferId];
-	}
+    return [self queueBuffer:bufferIn repeats:0];
 }
 
-- (bool) queueBuffer:(ALBuffer*) bufferIn repeat: (int)times
+- (bool) queueBuffer:(ALBuffer*) bufferIn repeats:(NSUInteger) repeats
 {
 	OPTIONALLY_SYNCHRONIZED(self)
 	{
@@ -1214,13 +1260,15 @@
 		{
 			self.buffer = nil;
 		}
-		ALuint* bufferIds = (ALuint*)malloc(sizeof(ALuint) * times);
+        
+        NSUInteger totalTimes = repeats + 1;
+		ALuint* bufferIds = (ALuint*)malloc(sizeof(ALuint) * totalTimes);
 		ALuint bufferId = bufferIn.bufferId;
-		for(int i = 0; i < times; i++)
+		for(NSUInteger i = 0; i < totalTimes; i++)
 		{
 			bufferIds[i] = bufferId;
 		}
-		bool result = [ALWrapper sourceQueueBuffers:sourceId numBuffers:times bufferIds:bufferIds];
+		bool result = [ALWrapper sourceQueueBuffers:sourceId numBuffers:(ALsizei)totalTimes bufferIds:bufferIds];
 		free(bufferIds);
 		return result;
 	}
@@ -1228,6 +1276,11 @@
 
 - (bool) queueBuffers:(NSArray*) buffers
 {
+    return [self queueBuffers:buffers repeats:0];
+}
+
+- (bool) queueBuffers:(NSArray*) buffers repeats:(NSUInteger) repeats
+{
 	OPTIONALLY_SYNCHRONIZED(self)
 	{
 		if(self.suspended)
@@ -1240,14 +1293,22 @@
 		{
 			self.buffer = nil;
 		}
-		int numBuffers = [buffers count];
-		ALuint* bufferIds = (ALuint*)malloc(sizeof(ALuint) * numBuffers);
-		int i = 0;
-		for(ALBuffer* buf in buffers)
+
+        NSUInteger numBuffers = [buffers count];
+        NSUInteger totalTimes = repeats + 1;
+		ALuint* bufferIds = (ALuint*)malloc(sizeof(ALuint) * totalTimes * numBuffers);
+        NSUInteger bufferNum;
+        
+		for(NSUInteger i = 0; i < totalTimes; i++)
 		{
-			bufferIds[i++] = buf.bufferId;
+            bufferNum = 0;
+            for(ALBuffer* buf in buffers)
+            {
+                bufferIds[(i * numBuffers) + bufferNum] = buf.bufferId;
+                bufferNum++;
+            }
 		}
-		bool result = [ALWrapper sourceQueueBuffers:sourceId numBuffers:numBuffers bufferIds:bufferIds];
+		bool result = [ALWrapper sourceQueueBuffers:sourceId numBuffers:(ALsizei)(totalTimes*numBuffers) bufferIds:bufferIds];
 		free(bufferIds);
 		return result;
 	}
@@ -1282,14 +1343,14 @@
 		{
 			self.buffer = nil;
 		}
-		int numBuffers = [buffers count];
+		NSUInteger numBuffers = [buffers count];
 		ALuint* bufferIds = malloc(sizeof(ALuint) * numBuffers);
 		int i = 0;
 		for(ALBuffer* buf in buffers)
 		{
 			bufferIds[i] = buf.bufferId;
 		}
-		bool result = [ALWrapper sourceUnqueueBuffers:sourceId numBuffers:numBuffers bufferIds:bufferIds];
+		bool result = [ALWrapper sourceUnqueueBuffers:sourceId numBuffers:(ALsizei)numBuffers bufferIds:bufferIds];
 		free(bufferIds);
 		return result;
 	}

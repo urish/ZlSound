@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 10-01-09.
 //
-// Copyright 2009 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -68,18 +71,18 @@
  * “[spec major number].[spec minor number] [optional vendor version information]”
  * Only valid when this is the current context.
  */
-@property(readonly) NSString* alVersion;
+@property(nonatomic,readonly) NSString* alVersion;
 
 /** The current context's attribute list.
  * Only valid when this is the current context.
  */
-@property(readonly) NSArray* attributes;
+@property(nonatomic,readonly) NSArray* attributes;
 
 /** The OpenAL context pointer. */
-@property(readonly) ALCcontext* context;
+@property(nonatomic,readonly) ALCcontext* context;
 
 /** The device this context was opened on. */
-@property(readonly) ALDevice* device;
+@property(nonatomic,readonly) ALDevice* device;
 
 /** The current distance model.
  * Legal values are AL_NONE, AL_INVERSE_DISTANCE, AL_INVERSE_DISTANCE_CLAMPED,
@@ -97,18 +100,18 @@
 /** List of available extensions (NSString*).
  * Only valid when this is the current context.
  */
-@property(readonly) NSArray* extensions;
+@property(nonatomic,readonly) NSArray* extensions;
 
 /** This context's listener. */
-@property(readonly) ALListener* listener;
+@property(nonatomic,readonly) ALListener* listener;
 
 /** Information about the specific renderer.
  * Only valid when this is the current context.
  */
-@property(readonly) NSString* renderer;
+@property(nonatomic,readonly) NSString* renderer;
 
 /** All sources associated with this context (ALSource*). */
-@property(readonly) NSArray* sources;
+@property(nonatomic,readonly) NSArray* sources;
 
 /** Speed of sound in same units as velocities.
  * Only valid when this is the current context.
@@ -118,7 +121,7 @@
 /** Name of the vendor.
  * Only valid when this is the current context.
  */
-@property(readonly) NSString* vendor;
+@property(nonatomic,readonly) NSString* vendor;
 
 
 #pragma mark Object Management
@@ -135,13 +138,13 @@
 /** Create a new context on the specified device with attributes.
  *
  * @param device The device to open the context on.
- * @param outputFrequency The frequency to mix all sources to before outputting.
+ * @param outputFrequency The frequency to mix all sources to before outputting (ignored by iOS).
  * @param refreshIntervals The number of passes per second used to mix the audio sources.
- *        For games this can be 5-15. For audio intensive apps, it should be higher.
+ *        For games this can be 5-15. For audio intensive apps, it should be higher (ignored by iOS).
  * @param synchronousContext If true, this context runs on the main thread and depends on you
- *        calling alcUpdateContext (best to leave this FALSE unless you know what you're doing).
- * @param monoSources A hint indicating how many sources should support mono.
- * @param stereoSources A hint indicating how many sources should support stereo.
+ *        calling alcUpdateContext (ignored by iOS).
+ * @param monoSources A hint indicating how many sources should support mono (default 28 on iOS).
+ * @param stereoSources A hint indicating how many sources should support stereo (default 4 on iOS).
  * @return A new context.
  */
 + (id) contextOnDevice:(ALDevice*) device
@@ -155,13 +158,13 @@
 /** Initialize this context on the specified device with attributes.
  *
  * @param device The device to open the context on.
- * @param outputFrequency The frequency to mix all sources to before outputting.
+ * @param outputFrequency The frequency to mix all sources to before outputting (ignored by iOS).
  * @param refreshIntervals The number of passes per second used to mix the audio sources.
- *        For games this can be 5-15. For audio intensive apps, it should be higher.
+ *        For games this can be 5-15. For audio intensive apps, it should be higher (ignored by iOS).
  * @param synchronousContext If true, this context runs on the main thread and depends on you
- *        calling alcUpdateContext (best to leave this FALSE unless you know what you're doing).
- * @param monoSources A hint indicating how many sources should support mono.
- * @param stereoSources A hint indicating how many sources should support stereo.
+ *        calling alcUpdateContext (ignored by iOS).
+ * @param monoSources A hint indicating how many sources should support mono (default 28 on iOS).
+ * @param stereoSources A hint indicating how many sources should support stereo (default 4 on iOS).
  * @return The initialized context.
  */
 - (id) initOnDevice:(ALDevice*) device
@@ -180,11 +183,6 @@
  * @return The initialized context.
  */
 - (id) initOnDevice:(ALDevice *) device attributes:(NSArray*) attributes;
-
-/** Close any OS resources in use by this object.
- * Any operations called on this object after closing will likely fail.
- */
-- (void) close;
 
 
 #pragma mark Utility

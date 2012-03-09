@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 10-08-21.
 //
-// Copyright 2010 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -36,6 +39,7 @@
  */
 @interface OALAudioTrack : NSObject <AVAudioPlayerDelegate, OALSuspendManager>
 {
+    /** If true, this track is recording metering data */
 	bool meteringEnabled;
 	bool interrupted;
 	AVAudioPlayer* player;
@@ -82,7 +86,7 @@
 #pragma mark Properties
 
 /** The URL of the currently loaded audio data. */
-@property(readonly) NSURL* currentlyLoadedUrl;
+@property(nonatomic,readonly) NSURL* currentlyLoadedUrl;
 
 /** Optional object that will receive notifications for decoding errors,
  * audio interruptions (such as an incoming phone call), and playback completion. <br>
@@ -106,10 +110,10 @@
 @property(readwrite,assign) bool muted;
 
 /** If true, automatically preload again when playback stops */
-@property(readwrite,assign) bool autoPreload;
+@property(nonatomic,readwrite,assign) bool autoPreload;
 
 /** If true, audio track is in preloaded state */
-@property(readonly) bool preloaded;
+@property(nonatomic,readonly) bool preloaded;
 
 /** The number of times to loop playback (-1 = forever).
  * <strong>Note:</strong> This value will be ignored, and get changed when you call the various playXX methods.
@@ -124,10 +128,10 @@
  * WARNING: Be VERY careful when accessing this, as some methods could cause
  * it to fall out of sync with OALAudioTrack (particularly play/pause/stop methods).
  */
-@property(readonly) AVAudioPlayer* player;
+@property(nonatomic,readonly) AVAudioPlayer* player;
 
 /** If true, background music is currently playing. */
-@property(readonly) bool playing;
+@property(nonatomic,readonly) bool playing;
 
 /** The current playback position in seconds from the start of the sound.
  * You can set this to change the playback position, whether it is currently playing or not.
@@ -164,11 +168,6 @@
  * @return A new audio track.
  */
 + (id) track;
-
-/** Close any OS resources in use by this object.
- * Any operations called on this object after closing will likely fail.
- */
-- (void) close;
 
 
 #pragma mark Playback
@@ -328,8 +327,30 @@
 /** Plays a sound asynchronously, starting at a specified point in the audio output device’s timeline.
  *
  * <strong>Note:</strong> This will have no effect on iOS versions prior to 4.0.
+ *
+ * @param time The time (device time) to start playing at.
+ * @return YES if the playback was successfully scheduled.
  */
 - (bool) playAtTime:(NSTimeInterval) time;
+
+/** Plays the currently preloaded track asynchronously when the specified track completes.
+ *
+ * <strong>Note:</strong> This will have no effect on iOS versions prior to 4.0.
+ *
+ * @param track The track to play after
+ * @return YES if the playback was successfully scheduled.
+ */
+- (bool) playAfterTrack:(OALAudioTrack*) track;
+
+/** Plays the currently preloaded track asynchronously when the specified track completes.
+ *
+ * <strong>Note:</strong> This will have no effect on iOS versions prior to 4.0.
+ *
+ * @param track The track to play after
+ * @param timeAdjust fine-tune value added to the time start offset.
+ * @return YES if the playback was successfully scheduled.
+ */
+- (bool) playAfterTrack:(OALAudioTrack*) track timeAdjust:(NSTimeInterval) timeAdjust;
 
 /** Stop playing and stop all operations.
  */

@@ -2,24 +2,25 @@
 //  OALAudioTracks.m
 //  ObjectAL
 //
-//  Created by Karl Stenerud on 10-09-18.
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Copyright 2010 Karl Stenerud
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -28,6 +29,7 @@
 #import "NSMutableArray+WeakReferences.h"
 #import "ObjectALMacros.h"
 #import "OALAudioSession.h"
+#import "IOSVersion.h"
 
 
 SYNTHESIZE_SINGLETON_FOR_CLASS_PROTOTYPE(OALAudioTracks);
@@ -38,9 +40,11 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_PROTOTYPE(OALAudioTracks);
  */
 @interface OALAudioTracks (Private)
 
-/** (INTERNAL USE) Close any resources belonging to the OS.
+/** (INTERNAL USE) Read deviceCurrentTime from an audio player
+ * as a workaround for a bug in iOS devices that causes the value
+ * to reset to 0 in certain circumstances.
  */
-- (void) closeOSResources;
+- (void) pollDeviceTime;
 
 @end
 
@@ -64,7 +68,18 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALAudioTracks);
 		tracks = [NSMutableArray newMutableArrayUsingWeakReferencesWithCapacity:10];
 		
 		[[OALAudioSession sharedInstance] addSuspendListener:self];
-	}
+
+		if([IOSVersion sharedInstance].version >= 4.0)
+		{
+            // Need to constantly poll deviceCurrentTime or else it resets to 0
+            // on devices (doesn't happen in simulator).
+            deviceTimePoller = [NSTimer scheduledTimerWithTimeInterval:1.0
+                                                                target:self
+                                                              selector:@selector(pollDeviceTime)
+                                                              userInfo:nil
+                                                               repeats:YES];
+        }
+    }
 	return self;
 }
 
@@ -72,33 +87,11 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALAudioTracks);
 {
 	OAL_LOG_DEBUG(@"%@: Dealloc", self);
 	[[OALAudioSession sharedInstance] removeSuspendListener:self];
+    [deviceTimePoller invalidate];
 
-	[self closeOSResources];
-
-	[tracks release];
-	[suspendHandler release];
-	
-	[super dealloc];
-}
-
-- (void) closeOSResources
-{
-	// Not directly holding any OS resources.
-}
-
-- (void) close
-{
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		if(nil != tracks)
-		{
-			[tracks makeObjectsPerformSelector:@selector(close)];
-			[tracks release];
-			tracks = nil;
-			
-			[self closeOSResources];
-		}
-	}
+	arcsafe_release(tracks);
+	arcsafe_release(suspendHandler);
+	arcsafe_super_dealloc();
 }
 
 
@@ -201,7 +194,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALAudioTracks);
 
 - (void) notifyTrackInitializing:(OALAudioTrack*) track
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	@synchronized(self)
 	{
 		[tracks addObject:track];
 	}
@@ -209,10 +202,22 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALAudioTracks);
 
 - (void) notifyTrackDeallocating:(OALAudioTrack*) track
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	@synchronized(self)
 	{
 		[tracks removeObject:track];
 	}
+}
+
+- (void) pollDeviceTime
+{
+	@synchronized(self)
+	{
+        // Only actually have to poll a single track's value to avoid the bug.
+        if([tracks count] > 0)
+        {
+            [[tracks objectAtIndex:0] deviceCurrentTime];
+        }
+    }
 }
 
 @end

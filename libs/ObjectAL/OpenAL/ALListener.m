@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 10-01-07.
 //
-// Copyright 2009 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -28,6 +31,7 @@
 #import "ObjectALMacros.h"
 #import "ALWrapper.h"
 #import "ALContext.h"
+#import <OpenAL/oalMacOSX_OALExtensions.h>
 
 
 @implementation ALListener
@@ -36,7 +40,7 @@
 
 + (id) listenerForContext:(ALContext*) context
 {
-	return [[[self alloc] initWithContext:context] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithContext:context]);
 }
 
 - (id) initWithContext:(ALContext*) contextIn
@@ -53,8 +57,8 @@
 
 - (void) dealloc
 {
-	[suspendHandler release];
-	[super dealloc];
+	arcsafe_release(suspendHandler);
+	arcsafe_super_dealloc();
 }
 
 #pragma mark Properties
@@ -124,7 +128,7 @@
 
 - (void) setOrientation:(ALOrientation) value
 {
-	OPTIONALLY_SYNCHRONIZED_STRUCT_OP(self)
+	OPTIONALLY_SYNCHRONIZED(self)
 	{
 		if(self.suspended)
 		{
@@ -148,7 +152,7 @@
 
 - (void) setPosition:(ALPoint) value
 {
-	OPTIONALLY_SYNCHRONIZED_STRUCT_OP(self)
+	OPTIONALLY_SYNCHRONIZED(self)
 	{
 		if(self.suspended)
 		{
@@ -172,7 +176,7 @@
 
 - (void) setVelocity:(ALVector) value
 {
-	OPTIONALLY_SYNCHRONIZED_STRUCT_OP(self)
+	OPTIONALLY_SYNCHRONIZED(self)
 	{
 		if(self.suspended)
 		{
@@ -183,6 +187,139 @@
 		[ALWrapper listener3f:AL_VELOCITY v1:value.x v2:value.y v3:value.z];
 	}
 }
+
+- (bool) reverbOn
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+        return [ALWrapper asaGetListenerb:ALC_ASA_REVERB_ON];
+	}
+}
+
+- (void) setReverbOn:(bool) reverbOn
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+		if(self.suspended)
+		{
+			OAL_LOG_DEBUG(@"%@: Called mutator on suspended object", self);
+			return;
+		}
+		
+		[ALWrapper asaListenerb:ALC_ASA_REVERB_ON value:reverbOn];
+	}
+}
+
+- (float) globalReverbLevel
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+        return [ALWrapper asaGetListenerf:ALC_ASA_REVERB_GLOBAL_LEVEL];
+	}
+}
+
+- (void) setGlobalReverbLevel:(float) globalReverbLevel
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+		if(self.suspended)
+		{
+			OAL_LOG_DEBUG(@"%@: Called mutator on suspended object", self);
+			return;
+		}
+		
+		[ALWrapper asaListenerf:ALC_ASA_REVERB_GLOBAL_LEVEL value:globalReverbLevel];
+	}
+}
+
+- (int) reverbRoomType
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+        return [ALWrapper asaGetListeneri:ALC_ASA_REVERB_ROOM_TYPE];
+	}
+}
+
+- (void) setReverbRoomType:(int) reverbRoomType
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+		if(self.suspended)
+		{
+			OAL_LOG_DEBUG(@"%@: Called mutator on suspended object", self);
+			return;
+		}
+		
+		[ALWrapper asaListeneri:ALC_ASA_REVERB_ROOM_TYPE value:reverbRoomType];
+	}
+}
+
+- (float) reverbEQGain
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+        return [ALWrapper asaGetListenerf:ALC_ASA_REVERB_EQ_GAIN];
+	}
+}
+
+- (void) setReverbEQGain:(float) reverbEQGain
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+		if(self.suspended)
+		{
+			OAL_LOG_DEBUG(@"%@: Called mutator on suspended object", self);
+			return;
+		}
+		
+		[ALWrapper asaListenerf:ALC_ASA_REVERB_EQ_GAIN value:reverbEQGain];
+	}
+}
+
+- (float) reverbEQBandwidth
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+        return [ALWrapper asaGetListenerf:ALC_ASA_REVERB_EQ_BANDWITH];
+	}
+}
+
+- (void) setReverbEQBandwidth:(float) reverbEQBandwidth
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+		if(self.suspended)
+		{
+			OAL_LOG_DEBUG(@"%@: Called mutator on suspended object", self);
+			return;
+		}
+		
+		[ALWrapper asaListenerf:ALC_ASA_REVERB_EQ_BANDWITH value:reverbEQBandwidth];
+	}
+}
+
+- (float) reverbEQFrequency
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+        return [ALWrapper asaGetListenerf:ALC_ASA_REVERB_EQ_FREQ];
+	}
+}
+
+- (void) setReverbEQFrequency:(float) reverbEQFrequency
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+		if(self.suspended)
+		{
+			OAL_LOG_DEBUG(@"%@: Called mutator on suspended object", self);
+			return;
+		}
+		
+		[ALWrapper asaListenerf:ALC_ASA_REVERB_EQ_FREQ value:reverbEQFrequency];
+	}
+}
+
 
 #pragma mark Suspend Handler
 

@@ -32,9 +32,5 @@
  */
 + (id) newMutableArrayUsingWeakReferencesWithCapacity:(NSUInteger) capacity;
 
-@end
 
-inline id mutant(int capacity) {
-	CFArrayCallBacks callbacks = {0, NULL, NULL, CFCopyDescription, CFEqual};
-	return (id)(CFArrayCreateMutable(0, capacity, &callbacks));    
-};
+@end

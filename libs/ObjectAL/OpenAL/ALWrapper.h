@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 15/12/09.
 //
-// Copyright 2009 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -994,5 +997,101 @@
 					 data:(const ALvoid*) data
 					 size:(ALsizei) size
 				frequency:(ALsizei) frequency;
+
+/** Read a boolean ASA property from a listener.
+ *
+ * @param property The property to read.
+ * @return The property's value.
+ */
++ (bool) asaGetListenerb:(ALuint) property;
+
+/** Read an integer ASA property from a listener.
+ *
+ * @param property The property to read.
+ * @return The property's value.
+ */
++ (ALint) asaGetListeneri:(ALuint) property;
+
+/** Read a floating point ASA property from a listener.
+ *
+ * @param property The property to read.
+ * @return The property's value.
+ */
++ (ALfloat) asaGetListenerf:(ALuint) property;
+
+/** Write a boolean ASA value to a listener.
+ *
+ * @param property The property to write to.
+ * @param value The value to write.
+ * @return TRUE if the operation was successful.
+ */
++ (bool) asaListenerb:(ALuint) property value:(bool) value;
+
+/** Write an integer ASA value to a listener.
+ *
+ * @param property The property to write to.
+ * @param value The value to write.
+ * @return TRUE if the operation was successful.
+ */
++ (bool) asaListeneri:(ALuint) property value:(ALint) value;
+
+/** Write a floating point ASA value to a listener.
+ *
+ * @param property The property to write to.
+ * @param value The value to write.
+ * @return TRUE if the operation was successful.
+ */
++ (bool) asaListenerf:(ALuint) property value:(ALfloat) value;
+
+/** Read a boolean ASA property from a source.
+ *
+ * @param sourceId The source's ID.
+ * @param property The property to read.
+ * @return The property's value.
+ */
++ (bool) asaGetSourceb:(ALuint) sourceId property:(ALuint) property;
+
+/** Read an integer ASA property from a source.
+ *
+ * @param sourceId The source's ID.
+ * @param property The property to read.
+ * @return The property's value.
+ */
++ (ALint) asaGetSourcei:(ALuint) sourceId property:(ALuint) property;
+
+/** Read a floating point ASA property from a source.
+ *
+ * @param sourceId The source's ID.
+ * @param property The property to read.
+ * @return The property's value.
+ */
++ (ALfloat) asaGetSourcef:(ALuint) sourceId property:(ALuint) property;
+
+/** Write a boolean ASA value to a source.
+ *
+ * @param sourceId The source's ID.
+ * @param property The property to write to.
+ * @param value The value to write.
+ * @return TRUE if the operation was successful.
+ */
++ (bool) asaSourceb:(ALuint) sourceId property:(ALuint) property value:(bool) value;
+
+/** Write an integer ASA value to a source.
+ *
+ * @param sourceId The source's ID.
+ * @param property The property to write to.
+ * @param value The value to write.
+ * @return TRUE if the operation was successful.
+ */
++ (bool) asaSourcei:(ALuint) sourceId property:(ALuint) property value:(ALint) value;
+
+/** Write a floating point ASA value to a source.
+ *
+ * @param sourceId The source's ID.
+ * @param property The property to write to.
+ * @param value The value to write.
+ * @return TRUE if the operation was successful.
+ */
++ (bool) asaSourcef:(ALuint) sourceId property:(ALuint) property value:(ALfloat) value;
 
 @end

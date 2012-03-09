@@ -11,7 +11,7 @@
 + (id) newMutableArrayUsingWeakReferencesWithCapacity:(NSUInteger) capacity
 {
 	CFArrayCallBacks callbacks = {0, NULL, NULL, CFCopyDescription, CFEqual};
-	return (id)(CFArrayCreateMutable(0, capacity, &callbacks));
+	return (__bridge_transfer id)(CFArrayCreateMutable(0, (CFIndex)capacity, &callbacks));
 }
 
 + (id) newMutableArrayUsingWeakReferences
@@ -21,7 +21,11 @@
 
 + (id) mutableArrayUsingWeakReferencesWithCapacity:(NSUInteger) capacity
 {
-	return [[self newMutableArrayUsingWeakReferencesWithCapacity:capacity] autorelease];
+    id result = [self newMutableArrayUsingWeakReferencesWithCapacity:capacity];
+#if !__has_feature(objc_arc)
+    [result autorelease];
+#endif
+    return result;
 }
 
 + (id) mutableArrayUsingWeakReferences
@@ -30,3 +34,8 @@
 }
 
 @end
+
+#define FIX_CATEGORY_BUG(name) @interface FIX_CATEGORY_BUG_##name @end @implementation FIX_CATEGORY_BUG_##name @end
+
+
+FIX_CATEGORY_BUG(NSMutableArray_WeakReferences);

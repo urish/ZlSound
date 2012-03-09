@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 15/12/09.
 //
-// Copyright 2009 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -46,44 +49,44 @@
 	/** The uncompressed sound data to play. */
 	void* bufferData;
 	bool freeDataOnDestroy;
-    /** The parent buffer (which owns the uncompressed data) */
-    ALBuffer* parentBuffer;
+	/** The parent buffer (which owns the uncompressed data) */
+	ALBuffer* parentBuffer;
 }
 
 
 #pragma mark Properties
 
 /** The size of a sample in bits. */
-@property(readonly) ALuint bits;
+@property(nonatomic,readonly) ALint bits;
 
 /** The ID assigned to this buffer by OpenAL. */
-@property(readonly) ALuint bufferId;
+@property(nonatomic,readonly) ALuint bufferId;
 
 /** The number of channels the buffer data plays in. */
-@property(readonly) ALuint channels;
+@property(nonatomic,readonly) ALint channels;
 
 /** The device this buffer was created for. */
-@property(readonly) ALDevice* device;
+@property(nonatomic,readonly) ALDevice* device;
 
 /** The format of the audio data (see al.h, AL_FORMAT_XXX). */
-@property(readonly) ALenum format;
+@property(nonatomic,readonly) ALenum format;
 
 /** The frequency this buffer runs at. */
-@property(readonly) ALuint frequency;
+@property(nonatomic,readonly) ALint frequency;
 
 /** The name given to this buffer upon creation. You may change it at runtime if you wish. */
-@property(readwrite,retain) NSString* name;
+@property(nonatomic,readwrite,retain) NSString* name;
 
 /** The size, in bytes, of the currently loaded buffer data. */
-@property(readonly) ALuint size;
+@property(nonatomic,readonly) ALint size;
 
 /** The duration of the sample in this buffer, in seconds. */
-@property(readonly) float duration;
+@property(nonatomic,readonly) float duration;
 
 /** If true, calls free() on the audio data when this object gets destroyed.
  * Default: YES
  */
-@property(readwrite,assign) bool freeDataOnDestroy;
+@property(nonatomic,readwrite,assign) bool freeDataOnDestroy;
 
 #pragma mark Object Management
 
@@ -122,7 +125,7 @@
  * the same memory. Therefore, modifying the parent buffer contents will affect its slices
  * and vice-versa.
  *
- * @param name Optional name that you can use to identify the created buffer in your code.
+ * @param sliceName Optional name that you can use to identify the created buffer in your code.
  * @param offset The offset in sound frames where the slice starts.
  * @param size The size of the slice in frames.
  * @return The requested buffer.

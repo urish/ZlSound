@@ -4,28 +4,32 @@
 //
 //  Created by Karl Stenerud on 10-09-18.
 //
-// Copyright 2009 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
 
 #import "OALAction.h"
 #import "OALActionManager.h"
+#import "ObjectALMacros.h"
 
 
 #if !OBJECTAL_USE_COCOS2D_ACTIONS
@@ -97,6 +101,7 @@
 
 - (void) updateCompletion:(float) proportionComplete
 {
+    #pragma unused(proportionComplete)
 	// Subclasses will override this.
 }
 
@@ -179,17 +184,17 @@
 + (id) actionWithDuration:(float) duration
 				 endValue:(float) endValue
 {
-	return [[[self alloc] initWithDuration:duration
-								  endValue:endValue] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithDuration:duration
+                                                     endValue:endValue]);
 }
 
 + (id) actionWithDuration:(float) duration
 				 endValue:(float) endValue
 				 function:(id<OALFunction,NSObject>) function
 {
-	return [[[self alloc] initWithDuration:duration
-								  endValue:endValue
-								  function:function] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithDuration:duration
+                                                     endValue:endValue
+                                                     function:function]);
 }
 
 + (id) actionWithDuration:(float) duration
@@ -197,10 +202,10 @@
 				 endValue:(float) endValue
 				 function:(id<OALFunction,NSObject>) function
 {
-	return [[[self alloc] initWithDuration:duration
-								startValue:startValue
-								  endValue:endValue
-								  function:function] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithDuration:duration
+                                                   startValue:startValue
+                                                     endValue:endValue
+                                                     function:function]);
 }
 
 - (id) initWithDuration:(float) durationIn endValue:(float) endValueIn
@@ -230,7 +235,7 @@
 	{
 		startValue = startValueIn;
 		endValue = endValueIn;
-		function = [functionIn retain];
+		function = arcsafe_retain(functionIn);
 		reverseFunction = [[OALReverseFunction alloc] initWithFunction:function];
 		realFunction = function;
 	}
@@ -239,9 +244,9 @@
 
 - (void) dealloc
 {
-	[function release];
-	[reverseFunction release];
-	[super dealloc];
+	arcsafe_release(function);
+	arcsafe_release(reverseFunction);
+    arcsafe_super_dealloc();
 }
 
 
@@ -254,9 +259,8 @@
 
 - (void) setFunction:(id <OALFunction,NSObject>) value
 {
-	id <OALFunction,NSObject> oldValue = function;
-	function = [value retain];
-	[oldValue release];
+    arcsafe_autorelease_unused(function);
+	function = arcsafe_retain(value);
 	reverseFunction.function = function;
 }
 

@@ -2,24 +2,25 @@
 //  OALAudioTracks.h
 //  ObjectAL
 //
-//  Created by Karl Stenerud on 10-09-18.
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Copyright 2010 Karl Stenerud
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -40,6 +41,9 @@
 	NSMutableArray* tracks;
 	bool muted;
 	bool paused;
+    
+    /** Timer to poll deviceCurrentTime so that it doesn't get reset on a device */
+    NSTimer* deviceTimePoller;
 	
 	/** Handles suspending and interrupting for this object. */
 	OALSuspendHandler* suspendHandler;
@@ -54,7 +58,7 @@
 @property(readwrite,assign) bool muted;
 
 /** All instantiated audio tracks. */
-@property(readonly) NSArray* tracks;
+@property(nonatomic,readonly) NSArray* tracks;
 
 
 #pragma mark Object Management
@@ -65,11 +69,6 @@
  * <b>- (void) purgeSharedInstance</b>: Purge (deallocate) the shared instance.
  */
 SYNTHESIZE_SINGLETON_FOR_CLASS_HEADER(OALAudioTracks);
-
-/** Close any OS resources in use by this object.
- * Any operations called on this object after closing will likely fail.
- */
-- (void) close;
 
 
 #pragma mark Internal Use

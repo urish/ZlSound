@@ -4,22 +4,25 @@
 //
 //  Created by Karl Stenerud on 10-12-24.
 //
-// Copyright 2010 Karl Stenerud
+//  Copyright (c) 2009 Karl Stenerud. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// The above copyright notice and this permission notice shall remain in place
+// in this source code.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Note: You are NOT required to make the license available from within your
-// iOS application. Including it in your project is sufficient.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 // Attribution is not required, but appreciated :)
 //
@@ -28,24 +31,12 @@
 #import "ObjectALMacros.h"
 
 
-/**
- * (INTERNAL USE) Private methods for OALAudioFile. 
- */
-@interface OALAudioFile (Private)
-
-/** (INTERNAL USE) Close any resources belonging to the OS.
- */
-- (void) closeOSResources;
-
-@end
-
-
 @implementation OALAudioFile
 
 + (OALAudioFile*) fileWithUrl:(NSURL*) url
 				 reduceToMono:(bool) reduceToMono
 {
-	return [[[self alloc] initWithUrl:url reduceToMono:reduceToMono] autorelease];
+	return arcsafe_autorelease([[self alloc] initWithUrl:url reduceToMono:reduceToMono]);
 }
 
 
@@ -54,7 +45,7 @@
 {
 	if(nil != (self = [super init]))
 	{
-		url = [urlIn retain];
+		url = arcsafe_retain(urlIn);
 		reduceToMono = reduceToMonoIn;
 
 		OSStatus error;
@@ -67,7 +58,7 @@
 		}
 
 		// Open the file
-		if(noErr != (error = ExtAudioFileOpenURL((CFURLRef)url, &fileHandle)))
+		if(noErr != (error = ExtAudioFileOpenURL((__bridge CFURLRef)url, &fileHandle)))
 		{
 			REPORT_EXTAUDIO_CALL(error, @"Could not open url %@", url);
 			goto done;
@@ -120,7 +111,7 @@
 
 		streamDescription.mBytesPerFrame = streamDescription.mChannelsPerFrame * streamDescription.mBitsPerChannel / 8;
 		streamDescription.mFramesPerPacket = 1;
-		streamDescription.mBytesPerPacket = streamDescription.mBytesPerFrame * streamDescription.mFramesPerPacket;
+		streamDescription.mBytesPerPacket = streamDescription.mBytesPerFrame * 1 /* streamDescription.mFramesPerPacket */;
 		
 		// Set the new audio format
 		if(noErr != (error = ExtAudioFileSetProperty(fileHandle,
@@ -135,7 +126,7 @@
 	done:
 		if(noErr != error)
 		{
-			[self release];
+			arcsafe_release(self);
 			return nil;
 		}
 		
@@ -145,28 +136,14 @@
 
 - (void) dealloc
 {
-	[self closeOSResources];
+    if(nil != fileHandle)
+    {
+        REPORT_EXTAUDIO_CALL(ExtAudioFileDispose(fileHandle), @"Error closing file (url = %@)", url);
+        fileHandle = nil;
+    }
 
-	[url release];
-
-	[super dealloc];
-}
-
-- (void) closeOSResources
-{
-	@synchronized(self)
-	{
-		if(nil != fileHandle)
-		{
-			REPORT_EXTAUDIO_CALL(ExtAudioFileDispose(fileHandle), @"Error closing file (url = %@)", url);
-			fileHandle = nil;
-		}
-	}
-}
-
-- (void) close
-{
-	[self closeOSResources];
+	arcsafe_release(url);
+	arcsafe_super_dealloc();
 }
 
 - (NSString*) description
@@ -222,7 +199,9 @@
 		
 		OSStatus error;
 		UInt32 numFramesRead;
-		
+        AudioBufferList bufferList;
+        UInt32 bufferOffset = 0;
+
 		
 		// < 0 means read to the end of the file.
 		if(numFrames < 0)
@@ -241,12 +220,6 @@
 			goto onFail;
 		}
 		
-		AudioBufferList bufferList;
-		bufferList.mNumberBuffers = 1;
-		bufferList.mBuffers[0].mNumberChannels = streamDescription.mChannelsPerFrame;
-		bufferList.mBuffers[0].mDataByteSize = streamSizeInBytes;
-		bufferList.mBuffers[0].mData = streamData;
-		
 		if(noErr != (error = ExtAudioFileSeek(fileHandle, startFrame)))
 		{
 			REPORT_EXTAUDIO_CALL(error, @"Could not seek to %ll in file (url = %@)",
@@ -255,17 +228,33 @@
 			goto onFail;
 		}
 		
-		numFramesRead = (UInt32)numFrames;
-		if(noErr != (error = ExtAudioFileRead(fileHandle, &numFramesRead, &bufferList)))
-		{
-			REPORT_EXTAUDIO_CALL(error, @"Could not read audio data in file (url = %@)",
-								 url);
-			goto onFail;
-		}
+        
+        bufferList.mNumberBuffers = 1;
+        bufferList.mBuffers[0].mNumberChannels = streamDescription.mChannelsPerFrame;
+        for(UInt32 framesToRead = (UInt32) numFrames; framesToRead > 0; framesToRead -= numFramesRead)
+        {
+            bufferList.mBuffers[0].mDataByteSize = streamDescription.mBytesPerFrame * framesToRead;
+            bufferList.mBuffers[0].mData = (char*)streamData + bufferOffset;
+            
+            numFramesRead = framesToRead;
+            if(noErr != (error = ExtAudioFileRead(fileHandle, &numFramesRead, &bufferList)))
+            {
+                REPORT_EXTAUDIO_CALL(error, @"Could not read audio data in file (url = %@)",
+                                     url);
+                goto onFail;
+            }
+            bufferOffset += streamDescription.mBytesPerFrame * numFramesRead;
+            if(numFramesRead == 0)
+            {
+                // Sometimes the stream description was wrong and you hit an EOF prematurely
+                break;
+            }
+        }
 		
 		if(nil != bufferSize)
 		{
-			*bufferSize = streamSizeInBytes;
+            // Use however many bytes were actually read
+			*bufferSize = bufferOffset;
 		}
 		
 		return streamData;
@@ -325,7 +314,7 @@
 		
 		return [ALBuffer bufferWithName:name
 								   data:streamData
-								   size:bufferSize
+								   size:(ALsizei)bufferSize
 								 format:audioFormat
 							  frequency:(ALsizei)streamDescription.mSampleRate];
 	}
@@ -337,8 +326,7 @@
 	ALBuffer* buffer = [file bufferNamed:[url description]
 							  startFrame:0
 							   numFrames:-1];
-	[file close];
-	[file release];
+	arcsafe_release(file);
 	return buffer;
 }
 
