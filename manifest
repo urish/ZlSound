@@ -2,11 +2,11 @@
 # this is your module manifest and used by Titanium
 # during compilation, packaging, distribution, etc.
 #
-version: 0.1
+version: 1.1
 description: Zero Latency Sound for iOS
 author: Uri Shaked
 license: Appcelerator Market Place
-copyright: Copyright (c) 2011 by Uri Shaked
+copyright: Copyright (c) 2011, 2012 by Uri Shaked
 
 
 # these should not be edited
