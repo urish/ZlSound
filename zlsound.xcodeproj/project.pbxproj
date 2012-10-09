@@ -544,7 +544,9 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = ComSalsarhythmsoftwareZlsound_Prefix.pch;
 				INSTALL_PATH = /usr/local/lib;
+				IPHONEOS_DEPLOYMENT_TARGET = 4.3;
 				PRODUCT_NAME = ComSalsarhythmsoftwareZlsound;
+				SDKROOT = iphoneos;
 			};
 			name = Debug;
 		};
@@ -559,7 +561,9 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = ComSalsarhythmsoftwareZlsound_Prefix.pch;
 				INSTALL_PATH = /usr/local/lib;
+				IPHONEOS_DEPLOYMENT_TARGET = 4.3;
 				PRODUCT_NAME = ComSalsarhythmsoftwareZlsound;
+				SDKROOT = iphoneos;
 			};
 			name = Release;
 		};
