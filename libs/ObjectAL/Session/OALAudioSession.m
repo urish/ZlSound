@@ -409,7 +409,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALAudioSession);
 {
 	// Simulator doesn't support setting the audio session category.
 #if !TARGET_IPHONE_SIMULATOR
-	
+	/*
 	NSString* actualCategory = audioSessionCategory;
 	
 	// Mixing uses software decoding and mixes with other apps.
@@ -443,7 +443,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALAudioSession);
 		// Setting MixWithOthers clears OtherMixableAudioShouldDuck.
 		[self setIntProperty:kAudioSessionProperty_OverrideCategoryMixWithOthers value:mixing];
 	}
-	
+	*/
 #endif /* !TARGET_IPHONE_SIMULATOR */
 }
 
