@@ -65,6 +65,10 @@ True if the sound sample is currently playing.
 Controls the volume of the sample. The valid values are in the range [0, 1.0], where higher values represent
 a higher volume.
 
+### duration[float] (read-only)
+
+Returns the duration of the media in seconds.
+
 ## Author
 
 Uri Shaked, [uri@salsa4fun.co.il](mailto:uri@salsa4fun.co.il)

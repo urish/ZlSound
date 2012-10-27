@@ -260,6 +260,10 @@
     }
 }
 
+-(id)duration {
+    return NUMFLOAT(self.mainBuffer.duration);
+}
+
 - (void)dealloc {
     [self stop: nil];
     
