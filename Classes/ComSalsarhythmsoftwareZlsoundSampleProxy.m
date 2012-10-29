@@ -183,12 +183,12 @@
             }
             [_source play];
             if (times > 0) {
-                [_source queueBuffer:(_loopBuffer != nil ? _loopBuffer : _mainBuffer) repeats: times];
+                [_source queueBuffer:(_loopBuffer != nil ? _loopBuffer : _mainBuffer) repeats: (times - 1)];
             }
         } else {
             if (_source.playing) {
                 NSLog(@"[ZLSound] INFO Sound is already playing, queueing additional loops");
-                [_source queueBuffer:(_loopBuffer != nil ? _loopBuffer : _mainBuffer) repeats: times + 1];
+                [_source queueBuffer:(_loopBuffer != nil ? _loopBuffer : _mainBuffer) repeats: times];
             } else {
                 [_source play];
             }
