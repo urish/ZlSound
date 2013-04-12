@@ -1,7 +1,4 @@
-This module is subject to the terms and conditions of the Appcelerator Module Marketplace. It must not be 
-distributed by any means except the Appcelerator Open Mobile Marketplace (https://marketplace.appcelerator.com/).
-
-The module is Copyright(c) 2011 by Uri Shaked. All Rights Reserved.
+The module is Copyright(c) 2011, 2012, 2013 by Uri Shaked, and is released under the Apache 2.0 license.
 
 This module includes some code which is licensed under the Apache License:
 ObjectAL, copyright 2009 Karl Stenerud, released under the Apache 2.0 license (http://www.apache.org/licenses/LICENSE-2.0)
