@@ -29,8 +29,8 @@
 
 #import "ALWrapper.h"
 #import "ObjectALMacros.h"
+#import "ARCSafe_MemMgmt.h"
 #import "OALNotifications.h"
-#import <OpenAL/oalMacOSX_OALExtensions.h>
 
 /** Check the result of an AL call, logging an error if necessary.
  *
@@ -94,14 +94,17 @@ typedef ALvoid AL_APIENTRY (*alBufferDataStaticProcPtr) (const ALint bid,
 
 static alcMacOSXGetMixerOutputRateProcPtr alcGetMacOSXMixerOutputRate = NULL;
 static alcMacOSXMixerOutputRateProcPtr alcMacOSXMixerOutputRate = NULL;
+static alcMacOSXRenderingQualityProcPtr alcMacOSXRenderingQuality = NULL;
+static alcMacOSXGetRenderingQualityProcPtr alcMacOSXGetRenderingQuality = NULL;
 static alBufferDataStaticProcPtr alBufferDataStatic = NULL;
-
 
 static alcASAGetSourceProcPtr alcASAGetSource = NULL;
 static alcASASetSourceProcPtr alcASASetSource = NULL;
 static alcASAGetListenerProcPtr alcASAGetListener = NULL;
 static alcASASetListenerProcPtr alcASASetListener = NULL;
 
+static alSourceAddNotificationProcPtr alSourceAddNotification = NULL;
+static alSourceRemoveNotificationProcPtr alSourceRemoveNotification = NULL;
 
 
 #pragma mark -
@@ -467,7 +470,7 @@ BOOL checkIfSuccessfulWithDevice(const char* contextInfo, ALCdevice* device)
 			}
 			else
 			{
-				OAL_LOG_ERROR(@"Could not make context %d current.  Pass in a device reference for better diagnostic info.", context);
+				OAL_LOG_ERROR(@"Could not make context %p current.  Pass in a device reference for better diagnostic info.", context);
 			}
 			return NO;
 		}
@@ -530,7 +533,7 @@ BOOL checkIfSuccessfulWithDevice(const char* contextInfo, ALCdevice* device)
 			}
 			else
 			{
-				OAL_LOG_ERROR(@"Could not get device for context %d.  Pass in a device reference for better diagnostic info.", context);
+				OAL_LOG_ERROR(@"Could not get device for context %p.  Pass in a device reference for better diagnostic info.", context);
 			}
 		}
 	}
@@ -1353,11 +1356,17 @@ BOOL checkIfSuccessfulWithDevice(const char* contextInfo, ALCdevice* device)
 {
     alcGetMacOSXMixerOutputRate = (alcMacOSXGetMixerOutputRateProcPtr) alcGetProcAddress(NULL, (const ALCchar*) "alcMacOSXGetMixerOutputRate");
     alcMacOSXMixerOutputRate = (alcMacOSXMixerOutputRateProcPtr) alcGetProcAddress(NULL, (const ALCchar*) "alcMacOSXMixerOutputRate");
+    alcMacOSXRenderingQuality = (alcMacOSXRenderingQualityProcPtr) alcGetProcAddress(NULL, (const ALCchar*) "alcMacOSXRenderingQuality");
+    alcMacOSXGetRenderingQuality = (alcMacOSXGetRenderingQualityProcPtr) alcGetProcAddress(NULL, (const ALCchar*) "alcMacOSXGetRenderingQuality");
     alBufferDataStatic = (alBufferDataStaticProcPtr) alcGetProcAddress(NULL, (const ALCchar*) "alBufferDataStatic");
+
     alcASAGetListener = (alcASAGetListenerProcPtr) alcGetProcAddress(NULL, (const ALCchar*) "alcASAGetListener");
     alcASASetListener = (alcASASetListenerProcPtr) alcGetProcAddress(NULL, (const ALCchar*) "alcASASetListener");
     alcASAGetSource = (alcASAGetSourceProcPtr) alcGetProcAddress(NULL, (const ALCchar*) "alcASAGetSource");
     alcASASetSource = (alcASASetSourceProcPtr) alcGetProcAddress(NULL, (const ALCchar*) "alcASASetSource");
+
+    alSourceAddNotification = (alSourceAddNotificationProcPtr) alcGetProcAddress(NULL, (const ALCchar*) "alSourceAddNotification");
+    alSourceRemoveNotification = (alSourceRemoveNotificationProcPtr) alcGetProcAddress(NULL, (const ALCchar*) "alSourceRemoveNotification");
 }
 
 + (ALdouble) getMixerOutputDataRate
@@ -1377,15 +1386,21 @@ BOOL checkIfSuccessfulWithDevice(const char* contextInfo, ALCdevice* device)
 	return result;
 }
 
-+ (void) setMixerOutputDataRate:(ALdouble) frequency
++ (bool) setMixerOutputDataRate:(ALdouble) frequency
 {
 	if(NULL == alcMacOSXMixerOutputRate)
 	{
         OAL_LOG_WARNING(@"No proc ptr for alcMacOSXMixerOutputRate");
-        return;
+        return false;
 	}
 	
-	alcMacOSXMixerOutputRate(frequency);
+	bool result;
+	@synchronized(self)
+	{
+        alcMacOSXMixerOutputRate(frequency);
+		result = CHECK_AL_CALL();
+    }
+    return result;
 }
 
 + (bool) bufferDataStatic:(ALuint) bufferId format:(ALenum) format data:(const ALvoid*) data size:(ALsizei) size frequency:(ALsizei) frequency
@@ -1560,6 +1575,7 @@ BOOL checkIfSuccessfulWithDevice(const char* contextInfo, ALCdevice* device)
 	
     bool result;
     ALint v = value;
+	@synchronized(self)
     {
         alcASASetSource(property, sourceId, &v, sizeof(v));
 		result = CHECK_AL_CALL();
@@ -1577,6 +1593,7 @@ BOOL checkIfSuccessfulWithDevice(const char* contextInfo, ALCdevice* device)
 	
     bool result;
     ALint v = value;
+	@synchronized(self)
     {
         alcASASetSource(property, sourceId, &v, sizeof(v));
 		result = CHECK_AL_CALL();
@@ -1591,9 +1608,10 @@ BOOL checkIfSuccessfulWithDevice(const char* contextInfo, ALCdevice* device)
         OAL_LOG_WARNING(@"No proc ptr for alcASASetSource");
         return false;
 	}
-	
+
     bool result;
     ALfloat v = value;
+	@synchronized(self)
     {
         alcASASetSource(property, sourceId, &v, sizeof(v));
 		result = CHECK_AL_CALL();
@@ -1601,23 +1619,22 @@ BOOL checkIfSuccessfulWithDevice(const char* contextInfo, ALCdevice* device)
 	return result;
 }
 
-
-
-
-
-
-
-
-+ (void) setReverbSendLevel:(float) level onSource:(ALuint) sourceID
++ (bool) setReverbSendLevel:(float) level onSource:(ALuint) sourceID
 {
 	if(NULL == alcASASetSource)
 	{
         OAL_LOG_WARNING(@"No proc ptr for alcASASetSource");
-        return;
+        return false;
 	}
 	
+    bool result;
     ALfloat value = level;
-    alcASASetSource(ALC_ASA_REVERB_SEND_LEVEL, sourceID, &value, sizeof(value));
+	@synchronized(self)
+    {
+        alcASASetSource(ALC_ASA_REVERB_SEND_LEVEL, sourceID, &value, sizeof(value));
+		result = CHECK_AL_CALL();
+	}
+    return result;
 }
 
 + (float) getSourceReverbSendLevel:(ALuint) sourceID
@@ -1630,20 +1647,30 @@ BOOL checkIfSuccessfulWithDevice(const char* contextInfo, ALCdevice* device)
 	
     ALfloat value = 0;
     ALuint size = sizeof(value);
-    alcASAGetSource(ALC_ASA_REVERB_SEND_LEVEL, sourceID, &value, &size);
+	@synchronized(self)
+    {
+        alcASAGetSource(ALC_ASA_REVERB_SEND_LEVEL, sourceID, &value, &size);
+		CHECK_AL_CALL();
+	}
     return value;
 }
 
-+ (void) setOcclusion:(float) occlusion onSource:(ALuint) sourceID
++ (bool) setOcclusion:(float) occlusion onSource:(ALuint) sourceID
 {
 	if(NULL == alcASASetSource)
 	{
         OAL_LOG_WARNING(@"No proc ptr for alcASASetSource");
-        return;
+        return false;
 	}
-	
+
+	bool result;
     ALfloat value = occlusion;
-    alcASASetSource(ALC_ASA_OCCLUSION, sourceID, &value, sizeof(value));
+	@synchronized(self)
+    {
+        alcASASetSource(ALC_ASA_OCCLUSION, sourceID, &value, sizeof(value));
+		result = CHECK_AL_CALL();
+	}
+    return result;
 }
 
 + (float) getSourceOcclusion:(ALuint) sourceID
@@ -1656,20 +1683,30 @@ BOOL checkIfSuccessfulWithDevice(const char* contextInfo, ALCdevice* device)
 	
     ALfloat value = 0;
     ALuint size = sizeof(value);
-    alcASAGetSource(ALC_ASA_OCCLUSION, sourceID, &value, &size);
+	@synchronized(self)
+    {
+        alcASAGetSource(ALC_ASA_OCCLUSION, sourceID, &value, &size);
+		CHECK_AL_CALL();
+	}
     return value;
 }
 
-+ (void) setObstruction:(float) obstruction onSource:(ALuint) sourceID
++ (bool) setObstruction:(float) obstruction onSource:(ALuint) sourceID
 {
 	if(NULL == alcASASetSource)
 	{
         OAL_LOG_WARNING(@"No proc ptr for alcASASetSource");
-        return;
+        return false;
 	}
 	
+	bool result;
     ALfloat value = obstruction;
-    alcASASetSource(ALC_ASA_OBSTRUCTION, sourceID, &value, sizeof(value));
+	@synchronized(self)
+    {
+        alcASASetSource(ALC_ASA_OBSTRUCTION, sourceID, &value, sizeof(value));
+		result = CHECK_AL_CALL();
+	}
+    return result;
 }
 
 + (float) getSourceObstruction:(ALuint) sourceID
@@ -1682,8 +1719,86 @@ BOOL checkIfSuccessfulWithDevice(const char* contextInfo, ALCdevice* device)
 	
     ALfloat value = 0;
     ALuint size = sizeof(value);
-    alcASAGetSource(ALC_ASA_OBSTRUCTION, sourceID, &value, &size);
+	@synchronized(self)
+    {
+        alcASAGetSource(ALC_ASA_OBSTRUCTION, sourceID, &value, &size);
+		CHECK_AL_CALL();
+	}
     return value;
+}
+
++ (bool) setRenderingQuality:(ALint) quality
+{
+	if(NULL == alcMacOSXRenderingQuality)
+	{
+        OAL_LOG_WARNING(@"No proc ptr for alcMacOSXRenderingQuality");
+        return false;
+	}
+
+	bool result;
+	@synchronized(self)
+    {
+        alcMacOSXRenderingQuality(quality);
+		result = CHECK_AL_CALL();
+	}
+    return result;
+}
+
++ (ALint) getRenderingQuality
+{
+	if(NULL == alcMacOSXGetRenderingQuality)
+	{
+        OAL_LOG_WARNING(@"No proc ptr for alcMacOSXGetRenderingQuality. Returning 0");
+        return 0;
+	}
+
+    ALint value = 0;
+    @synchronized(self)
+    {
+        value = alcMacOSXGetRenderingQuality();
+		CHECK_AL_CALL();
+	}
+    return value;
+}
+
++ (bool) addNotification:(ALuint) notificationID
+                onSource:(ALuint) source
+                callback:(alSourceNotificationProc) callback
+                userData:(void*) userData
+{
+	if(NULL == alSourceAddNotification)
+	{
+        OAL_LOG_WARNING(@"No proc ptr for alSourceAddNotification");
+        return false;
+	}
+
+	bool result;
+	@synchronized(self)
+    {
+        alSourceAddNotification(source, notificationID, callback, userData);
+		result = CHECK_AL_CALL();
+	}
+    return result;
+}
+
++ (bool) removeNotification:(ALuint) notificationID
+                   onSource:(ALuint) source
+                   callback:(alSourceNotificationProc) callback
+                   userData:(void*) userData
+{
+	if(NULL == alSourceRemoveNotification)
+	{
+        OAL_LOG_WARNING(@"No proc ptr for alSourceRemoveNotification");
+        return false;
+	}
+
+	bool result;
+	@synchronized(self)
+    {
+        alSourceRemoveNotification(source, notificationID, callback, userData);
+		result = CHECK_AL_CALL();
+	}
+    return result;
 }
 
 @end

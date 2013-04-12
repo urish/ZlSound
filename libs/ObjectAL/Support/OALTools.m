@@ -29,13 +29,37 @@
 
 #import "OALTools.h"
 #import "ObjectALMacros.h"
+#import "ARCSafe_MemMgmt.h"
 #import "OALNotifications.h"
 #import <AudioToolbox/AudioToolbox.h>
 
 
 @implementation OALTools
 
+static NSBundle* g_defaultBundle;
+
++ (void) initialize
+{
+    g_defaultBundle = as_retain([NSBundle mainBundle]);
+}
+
++ (void) setDefaultBundle:(NSBundle*) bundle
+{
+    as_autorelease_noref(g_defaultBundle);
+    g_defaultBundle = as_retain(bundle);
+}
+
++ (NSBundle*) defaultBundle
+{
+    return g_defaultBundle;
+}
+
 + (NSURL*) urlForPath:(NSString*) path
+{
+    return [self urlForPath:path bundle:g_defaultBundle];
+}
+
++ (NSURL*) urlForPath:(NSString*) path bundle:(NSBundle*) bundle
 {
 	if(nil == path)
 	{
@@ -44,7 +68,7 @@
 	NSString* fullPath = path;
 	if([fullPath characterAtIndex:0] != '/')
 	{
-		fullPath = [[NSBundle mainBundle] pathForResource:path ofType:nil];
+		fullPath = [bundle pathForResource:path ofType:nil];
 		if(nil == fullPath)
 		{
 			OAL_LOG_ERROR(@"Could not find full path of file %@", path);
@@ -113,8 +137,8 @@
 		va_start(args, description);
 		description = [[NSString alloc] initWithFormat:description arguments:args];
 		va_end(args);
-		OAL_LOG_ERROR_CONTEXT(function, @"%@ (error code 0x%08x: %@)", description, errorCode, errorString);
-		arcsafe_release(description);
+		OAL_LOG_ERROR_CONTEXT(function, @"%@ (error code 0x%08lx: %@)", description, (unsigned long)errorCode, errorString);
+		as_release(description);
 	}
 }
 
@@ -122,6 +146,7 @@
 					 function:(const char*) function
 				  description:(NSString*) description, ...
 {
+#ifdef __IPHONE_OS_VERSION_MAX_ALLOWED
 	if(noErr != errorCode)
 	{
 		NSString* errorString;
@@ -180,7 +205,7 @@
 		description = [[NSString alloc] initWithFormat:description arguments:args];
 		va_end(args);
 		OAL_LOG_ERROR_CONTEXT(function, @"%@ (error code 0x%08x: %@)", description, errorCode, errorString);
-		arcsafe_release(description);
+		as_release(description);
 #else
         #pragma unused(function)
         #pragma unused(description)
@@ -192,6 +217,7 @@
 			[[NSNotificationCenter defaultCenter] postNotificationName:OALAudioErrorNotification object:self];
 		}
 	}
+#endif
 }
 
 @end

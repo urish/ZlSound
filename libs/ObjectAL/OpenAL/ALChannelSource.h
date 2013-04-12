@@ -104,11 +104,11 @@
 	int defaultSourceType;
     /** Default looping */
 	bool defaultLooping;
-    /* Default reverb send level */
+    /** Default reverb send level */
     float defaultReverbSendLevel;
-    /* Default occlusion */
+    /** Default occlusion */
     float defaultReverbOcclusion;
-    /* Default obstruction */
+    /** Default obstruction */
     float defaultReverbObstruction;
     
 
@@ -160,13 +160,13 @@
 #pragma mark Properties
 
 /** This source's owning context. */
-@property(nonatomic,readonly) ALContext* context;
+@property(nonatomic,readonly,retain) ALContext* context;
 
 /** All sources being used by this channel. Do not modify! */
-@property(nonatomic,readonly) ALSoundSourcePool* sourcePool;
+@property(nonatomic,readonly,retain) ALSoundSourcePool* sourcePool;
 
 /** The number of sources reserved by this channel. */
-@property(readwrite,assign) int reservedSources;
+@property(nonatomic,readwrite,assign) int reservedSources;
 
 #pragma mark Object Management
 
@@ -222,5 +222,18 @@
  */
 - (void) addChannel:(ALChannelSource*) channel;
 
+/** Set all buffers in all non-playing sources to nil.
+ *
+ * @return A list of buffers that were cleared.
+ */
+- (NSArray*) clearUnusedBuffers;
+
+/** Remove all instances of the specified buffer.
+ *
+ * @param name The name of the buffer.
+ *
+ * @return NO if any of the matching buffers are currently being played.
+ */
+- (BOOL) removeBuffersNamed:(NSString*) name;
 
 @end

@@ -35,7 +35,10 @@
 #import "OALSuspendHandler.h"
 
 @class ALContext;
+@class ALSource;
 
+
+typedef void (^OALSourceNotificationCallback)(ALSource* source, ALuint notificationID, ALvoid* userData);
 
 #pragma mark ALSource
 
@@ -83,31 +86,31 @@
 /** The sound buffer this source is attached to (set to nil to detach the currently attached
  * buffer).
  */
-@property(readwrite,retain) ALBuffer* buffer;
+@property(nonatomic,readwrite,retain) ALBuffer* buffer;
 
 /** How many buffers this source has queued. */
-@property(nonatomic,readonly) int buffersQueued;
+@property(nonatomic,readonly,assign) int buffersQueued;
 
 /** How many of these buffers have been processed during playback. */
-@property(nonatomic,readonly) int buffersProcessed;
+@property(nonatomic,readonly,assign) int buffersProcessed;
 
 /** The context this source was opened on. */
-@property(nonatomic,readonly) ALContext* context;
+@property(nonatomic,readonly,retain) ALContext* context;
 
 /** The offset into the current buffer (in bytes). */
-@property(readwrite,assign) float offsetInBytes;
+@property(nonatomic,readwrite,assign) float offsetInBytes;
 
 /** The offset into the current buffer (in samples). */
-@property(readwrite,assign) float offsetInSamples;
+@property(nonatomic,readwrite,assign) float offsetInSamples;
 
 /** The offset into the current buffer (in seconds). */
-@property(readwrite,assign) float offsetInSeconds;
+@property(nonatomic,readwrite,assign) float offsetInSeconds;
 
 /** OpenAL's ID for this source. */
-@property(nonatomic,readonly) ALuint sourceId;
+@property(nonatomic,readonly,assign) ALuint sourceId;
 
 /** The state of this source. */
-@property(readwrite,assign) int state;
+@property(nonatomic,readwrite,assign) int state;
 
 
 #pragma mark Object Management
@@ -188,5 +191,33 @@
  * @return TRUE if the operation was successful.
  */
 - (bool) unqueueBuffers:(NSArray*) buffers;
+
+
+#pragma mark Notifications
+
+/** Register to receive notifications about an event on this source. (iOS 5.0+)
+ *
+ * The following notification types are recognized:
+ * AL_SOURCE_STATE - Sent when a source's state changes.
+ * AL_BUFFERS_PROCESSED - Sent when all buffers have been processed.
+ * AL_QUEUE_HAS_LOOPED - Sent when a looping source has looped to it's start point.
+ *
+ * @param notificationID The kind of notification to be informed of (see above).
+ * @param callback The block to call for notification.
+ * @param userData a pointer that will be passed to the callback.
+ */
+- (void) registerNotification:(ALuint) notificationID
+                     callback:(OALSourceNotificationCallback) callback
+                     userData:(void*) userData;
+
+/** Unregister notifications for a notification type on this source. (iOS 5.0+)
+ *
+ * @param notificationID The kind of notification to remove.
+ */
+- (void) unregisterNotification:(ALuint) notificationID;
+
+/** Unregister all notifications for this source. (iOS 5.0+)
+ */
+- (void) unregisterAllNotifications;
 
 @end

@@ -28,159 +28,65 @@
 //
 
 #import "OALAudioActions.h"
+#import "OALAction+Private.h"
 #import "ObjectALMacros.h"
+#import "ARCSafe_MemMgmt.h"
 
 
-#pragma mark OAL_GainProtocol
+@implementation OALPropertyAction (Audio)
 
-/** (INTERNAL USE) Protocol to keep the compiler happy. */
-@protocol OAL_GainProtocol
-
-/** The gain (volume), represented as a float from 0.0 to 1.0. */
-@property(readwrite) float gain;
-
-@end
-
-
-#pragma mark -
-#pragma mark OALGainAction
-
-@implementation OALGainAction
-
-
-#pragma mark Utility
-
-+ (id<OALFunction,NSObject>) defaultFunction
++ (OALPropertyAction*) pitchActionWithDuration:(float) duration
+                                      endValue:(float) endValue
 {
-	return [OALSCurveFunction function];
+    return [self actionWithDuration:duration
+                        propertyKey:@"pitch"
+                           endValue:endValue];
 }
 
-
-#pragma mark Functions
-
-- (void) prepareWithTarget:(id) targetIn
++ (OALPropertyAction*) pitchActionWithDuration:(float) duration
+                                    startValue:(float) startValue
+                                      endValue:(float) endValue
 {
-	NSAssert([targetIn respondsToSelector:@selector(gain)]
-			 && [targetIn respondsToSelector:@selector(setGain:)],
-			 @"Target does not respond to selectors [gain] and [setGain:]");
-	
-	// NAN is a special marker value instructing us to use the current value from the target.
-	if(isnan(startValue))
-	{
-		startValue = [(id<OAL_GainProtocol>)targetIn gain];
-	}
-	
-	[super prepareWithTarget:targetIn];
+    return [self actionWithDuration:duration
+                        propertyKey:@"pitch"
+                         startValue:startValue
+                           endValue:endValue];
 }
 
-- (void) updateCompletion:(float) proportionComplete
++ (OALPropertyAction*) panActionWithDuration:(float) duration
+                                    endValue:(float) endValue
 {
-	[(id<OAL_GainProtocol>)target setGain:lowValue
-	 + [realFunction valueForInput:proportionComplete] * delta];
+    return [self actionWithDuration:duration
+                        propertyKey:@"pan"
+                           endValue:endValue];
 }
 
-@end
-
-
-#pragma mark -
-#pragma mark OAL_PitchProtocol
-
-/** (INTERNAL USE) Protocol to keep the compiler happy. */
-@protocol OAL_PitchProtocol
-
-/** The pitch, represented as a float with 1.0 representing normal pitch. */
-@property(readwrite) float pitch;
-
-@end
-
-
-#pragma mark -
-#pragma mark OALPitchAction
-
-@implementation OALPitchAction
-
-
-#pragma mark Utility
-
-+ (id<OALFunction,NSObject>) defaultFunction
++ (OALPropertyAction*) panActionWithDuration:(float) duration
+                                  startValue:(float) startValue
+                                    endValue:(float) endValue
 {
-	return [OALLinearFunction function];
+    return [self actionWithDuration:duration
+                        propertyKey:@"pan"
+                         startValue:startValue
+                           endValue:endValue];
 }
 
-
-#pragma mark Functions
-
-- (void) prepareWithTarget:(id) targetIn
-{	
-	NSAssert([targetIn respondsToSelector:@selector(pitch)]
-			 && [targetIn respondsToSelector:@selector(setPitch:)],
-			 @"Target does not respond to selectors [pitch] and [setPitch:]");
-	
-	// NAN is a special marker value instructing us to use the current value from the target.
-	if(isnan(startValue))
-	{
-		startValue = [(id<OAL_PitchProtocol>)targetIn pitch];
-	}
-	
-	[super prepareWithTarget:targetIn];
-}
-
-- (void) updateCompletion:(float) proportionComplete
++ (OALPropertyAction*) gainActionWithDuration:(float) duration
+                                     endValue:(float) endValue
 {
-	[(id<OAL_PitchProtocol>)target setPitch:startValue
-	 + [realFunction valueForInput:proportionComplete] * delta];
+    return [self actionWithDuration:duration
+                        propertyKey:@"gain"
+                           endValue:endValue];
 }
 
-@end
-
-
-#pragma mark -
-#pragma mark OAL_PanProtocol
-
-/** (INTERNAL USE) Protocol to keep the compiler happy. */
-@protocol OAL_PanProtocol
-
-/** The pan, represented as a float from -1.0 to 1.0. */
-@property(readwrite) float pan;
-
-@end
-
-
-#pragma mark -
-#pragma mark OALPanAction
-
-@implementation OALPanAction
-
-
-#pragma mark Utility
-
-+ (id<OALFunction,NSObject>) defaultFunction
++ (OALPropertyAction*) gainActionWithDuration:(float) duration
+                                   startValue:(float) startValue
+                                     endValue:(float) endValue
 {
-	return [OALLinearFunction function];
-}
-
-
-#pragma mark Functions
-
-- (void) prepareWithTarget:(id) targetIn
-{	
-	NSAssert([targetIn respondsToSelector:@selector(pan)]
-			 && [targetIn respondsToSelector:@selector(setPan:)],
-			 @"Target does not respond to selectors [pan] and [setPan:]");
-	
-	// NAN is a special marker value instructing us to use the current value from the target.
-	if(isnan(startValue))
-	{
-		startValue = [(id<OAL_PanProtocol>)targetIn pan];
-	}
-	
-	[super prepareWithTarget:targetIn];
-}
-
-- (void) updateCompletion:(float) proportionComplete
-{
-	[(id<OAL_PanProtocol>)target setPan:startValue
-	 + [realFunction valueForInput:proportionComplete] * delta];
+    return [self actionWithDuration:duration
+                        propertyKey:@"gain"
+                         startValue:startValue
+                           endValue:endValue];
 }
 
 @end
@@ -189,13 +95,15 @@
 #pragma mark -
 #pragma mark OAL_PositionProtocol
 
+/** \cond */
 /** (INTERNAL USE) Protocol to keep the compiler happy. */
 @protocol OAL_PositionProtocol
 
 /** The position in 3D space. */
-@property(readwrite,assign) ALPoint position;
+@property(nonatomic,readwrite,assign) ALPoint position;
 
 @end
+/** \endcond */
 
 
 #pragma mark -
@@ -208,7 +116,7 @@
 
 + (id) actionWithPosition:(ALPoint) position
 {
-	return arcsafe_autorelease([(OALPlaceAction*)[self alloc] initWithPosition:position]);
+	return as_autorelease([(OALPlaceAction*)[self alloc] initWithPosition:position]);
 }
 
 - (id) initWithPosition:(ALPoint) positionIn
@@ -239,7 +147,7 @@
 - (void) updateCompletion:(float) proportionComplete
 {
 	[super updateCompletion:proportionComplete];
-	[(id<OAL_PositionProtocol>)target setPosition:position];
+	[(id<OAL_PositionProtocol>)self.target setPosition:position];
 }
 
 @end
@@ -255,12 +163,12 @@
 
 + (id) actionWithDuration:(float) duration position:(ALPoint) position
 {
-	return arcsafe_autorelease([(OALMoveToAction*)[self alloc] initWithDuration:duration position:position]);
+	return as_autorelease([(OALMoveToAction*)[self alloc] initWithDuration:duration position:position]);
 }
 
 + (id) actionWithUnitsPerSecond:(float) unitsPerSecond position:(ALPoint) position
 {
-	return arcsafe_autorelease([[self alloc] initWithUnitsPerSecond:unitsPerSecond position:position]);
+	return as_autorelease([[self alloc] initWithUnitsPerSecond:unitsPerSecond position:position]);
 }
 
 - (id) initWithDuration:(float) durationIn position:(ALPoint) positionIn
@@ -305,13 +213,13 @@
 	// value in duration.
 	if(unitsPerSecond > 0)
 	{
-		duration = sqrtf(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z) / unitsPerSecond;
+		duration_ = sqrtf(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z) / unitsPerSecond;
 	}
 }
 
 - (void) updateCompletion:(float) proportionComplete
 {
-	[(id<OAL_PositionProtocol>)target setPosition:
+	[(id<OAL_PositionProtocol>)self.target setPosition:
 	 ALPointMake(startPoint.x + delta.x*proportionComplete,
 				 startPoint.y + delta.y*proportionComplete,
 				 startPoint.z + delta.z*proportionComplete)];
@@ -330,12 +238,12 @@
 
 + (id) actionWithDuration:(float) duration delta:(ALPoint) delta
 {
-	return arcsafe_autorelease([[self alloc] initWithDuration:duration delta:delta]);
+	return as_autorelease([[self alloc] initWithDuration:duration delta:delta]);
 }
 
 + (id) actionWithUnitsPerSecond:(float) unitsPerSecond delta:(ALPoint) delta
 {
-	return arcsafe_autorelease([[self alloc] initWithUnitsPerSecond:unitsPerSecond delta:delta]);
+	return as_autorelease([[self alloc] initWithUnitsPerSecond:unitsPerSecond delta:delta]);
 }
 
 - (id) initWithDuration:(float) durationIn delta:(ALPoint) deltaIn
@@ -357,7 +265,7 @@
 		{
 			// If unitsPerSecond was set, we use that to calculate duration.  Otherwise just use the current
 			// value in duration.
-			duration = sqrtf(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z) / unitsPerSecond;
+			duration_ = sqrtf(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z) / unitsPerSecond;
 		}
 	}
 	return self;
@@ -384,13 +292,13 @@
 	{
 		// If unitsPerSecond was set, we use that to calculate duration.  Otherwise just use the current
 		// value in duration.
-		duration = sqrtf(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z) / unitsPerSecond;
+		duration_ = sqrtf(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z) / unitsPerSecond;
 	}
 }
 
 - (void) updateCompletion:(float) proportionComplete
 {
-	[(id<OAL_PositionProtocol>)target setPosition:
+	[(id<OAL_PositionProtocol>)self.target setPosition:
 	 ALPointMake(startPoint.x + delta.x*proportionComplete,
 				 startPoint.y + delta.y*proportionComplete,
 				 startPoint.z + delta.z*proportionComplete)];

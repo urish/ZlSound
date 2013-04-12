@@ -31,49 +31,33 @@
 #import "ALTypes.h"
 
 
-#pragma mark OALGainAction
-
-/**
- * A function-based action that modifies the target's gain.
- * The target's gain poperty is assumed to be a float, accepting values
- * from 0.0 (no sound) to 1.0 (max gain).
- */
-@interface OALGainAction: OALFunctionAction
-{
-}
-
-@end
-
-
 #pragma mark -
-#pragma mark OALPitchAction
+#pragma mark Audio Property Actions
 
-/**
- * A function-based action that modifies the target's pitch.
- * The target's pitch property is assumed to be a float, with
- * 1.0 representing normal pitch, and lower values giving lower pitch.
- */
-@interface OALPitchAction: OALFunctionAction
-{
-}
+@interface OALPropertyAction (Audio)
+
++ (OALPropertyAction*) pitchActionWithDuration:(float) duration
+                                      endValue:(float) endValue;
+
++ (OALPropertyAction*) pitchActionWithDuration:(float) duration
+                                    startValue:(float) startValue
+                                      endValue:(float) endValue;
+
++ (OALPropertyAction*) panActionWithDuration:(float) duration
+                                    endValue:(float) endValue;
+
++ (OALPropertyAction*) panActionWithDuration:(float) duration
+                                  startValue:(float) startValue
+                                    endValue:(float) endValue;
+
++ (OALPropertyAction*) gainActionWithDuration:(float) duration
+                                     endValue:(float) endValue;
+
++ (OALPropertyAction*) gainActionWithDuration:(float) duration
+                                   startValue:(float) startValue
+                                     endValue:(float) endValue;
 
 @end
-
-
-#pragma mark -
-#pragma mark OALPanAction
-
-/**
- * A function-based action that modifies the target's pan.
- * The target's pan property is assumed to be a float, accepting values
- * from -1.0 (max left) to 1.0 (max right).
- */
-@interface OALPanAction: OALFunctionAction
-{
-}
-
-@end
-
 
 #pragma mark -
 #pragma mark OALPlaceAction
@@ -90,7 +74,7 @@
 #pragma mark Properties
 
 /** The position where the target will be placed. */
-@property(readwrite,assign,nonatomic) ALPoint position;
+@property(nonatomic,readwrite,assign) ALPoint position;
 
 
 #pragma mark Object Management
@@ -134,12 +118,12 @@
 #pragma mark Properties
 
 /** The position to move the target to. */
-@property(readwrite,assign,nonatomic) ALPoint position;
+@property(nonatomic,readwrite,assign) ALPoint position;
 
 /** The speed at which to move the target.
  * If this is 0, the target will be moved at the speed determined by duration.
  */
-@property(readwrite,assign,nonatomic) float unitsPerSecond;
+@property(nonatomic,readwrite,assign) float unitsPerSecond;
 
 
 #pragma mark Object Management
@@ -198,12 +182,12 @@
 #pragma mark Properties
 
 /** The amount to move the target by. */
-@property(readwrite,assign,nonatomic) ALPoint delta;
+@property(nonatomic,readwrite,assign) ALPoint delta;
 
 /** The speed at which to move the target.
  * If this is 0, the target will be moved at the speed determined by duration.
  */
-@property(readwrite,assign,nonatomic) float unitsPerSecond;
+@property(nonatomic,readwrite,assign) float unitsPerSecond;
 
 /** Create a new action.
  *

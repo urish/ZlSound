@@ -28,6 +28,7 @@
 #import "OALAudioTracks.h"
 #import "NSMutableArray+WeakReferences.h"
 #import "ObjectALMacros.h"
+#import "ARCSafe_MemMgmt.h"
 #import "OALAudioSession.h"
 #import "IOSVersion.h"
 
@@ -35,6 +36,7 @@
 SYNTHESIZE_SINGLETON_FOR_CLASS_PROTOTYPE(OALAudioTracks);
 
 
+/** \cond */
 /**
  * (INTERNAL USE) Private methods for OALAudioTracks.
  */
@@ -47,6 +49,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_PROTOTYPE(OALAudioTracks);
 - (void) pollDeviceTime;
 
 @end
+/** \endcond */
 
 
 #pragma mark OALAudioTracks
@@ -89,9 +92,9 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALAudioTracks);
 	[[OALAudioSession sharedInstance] removeSuspendListener:self];
     [deviceTimePoller invalidate];
 
-	arcsafe_release(tracks);
-	arcsafe_release(suspendHandler);
-	arcsafe_super_dealloc();
+	as_release(tracks);
+	as_release(suspendHandler);
+	as_superdealloc();
 }
 
 
@@ -101,15 +104,12 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALAudioTracks);
 
 - (bool) paused
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return paused;
-	}
+    return paused;
 }
 
 - (void) setPaused:(bool) value
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(tracks)
 	{
 		if(self.suspended)
 		{
@@ -127,15 +127,12 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALAudioTracks);
 
 - (bool) muted
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return muted;
-	}
+    return muted;
 }
 
 - (void) setMuted:(bool) value
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(tracks)
 	{
 		if(self.suspended)
 		{
@@ -149,6 +146,14 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALAudioTracks);
 			track.muted = muted;
 		}
 	}
+}
+
+
+#pragma mark Playback
+
+- (void) stopAllTracks
+{
+    [self.tracks makeObjectsPerformSelector:@selector(stop)];
 }
 
 
@@ -194,15 +199,16 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALAudioTracks);
 
 - (void) notifyTrackInitializing:(OALAudioTrack*) track
 {
-	@synchronized(self)
+	@synchronized(tracks)
 	{
+        track.muted = self.muted;
 		[tracks addObject:track];
 	}
 }
 
 - (void) notifyTrackDeallocating:(OALAudioTrack*) track
 {
-	@synchronized(self)
+	@synchronized(tracks)
 	{
 		[tracks removeObject:track];
 	}
@@ -210,7 +216,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALAudioTracks);
 
 - (void) pollDeviceTime
 {
-	@synchronized(self)
+	@synchronized(tracks)
 	{
         // Only actually have to poll a single track's value to avoid the bug.
         if([tracks count] > 0)

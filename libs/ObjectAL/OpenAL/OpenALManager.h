@@ -30,6 +30,11 @@
 #import <Foundation/Foundation.h>
 #import "SynthesizeSingleton.h"
 #import "ALContext.h"
+#ifdef __IPHONE_OS_VERSION_MAX_ALLOWED
+#import <OpenAL/oalMacOSX_OALExtensions.h>
+#else
+#import <OpenAL/MacOSX_OALExtensions.h>
+#endif
 
 
 #pragma mark OpenALManager
@@ -47,8 +52,6 @@
  */
 @interface OpenALManager : NSObject <OALSuspendManager>
 {
-	__unsafe_unretained ALContext* currentContext; // WEAK reference
-	
 	/** All opened devices */
 	NSMutableArray* devices;
 	
@@ -63,26 +66,36 @@
 #pragma mark Properties
 
 /** List of available playback devices (NSString*). */
-@property(nonatomic,readonly) NSArray* availableDevices;
+@property(nonatomic,readonly,retain) NSArray* availableDevices;
 
 /** List of available capture devices (NSString*). */
-@property(nonatomic,readonly) NSArray* availableCaptureDevices;
+@property(nonatomic,readonly,retain) NSArray* availableCaptureDevices;
 
 /** The current context (some context operations require the context to be the "current" one).
+ * WEAK reference.
  */
-@property(readwrite,assign) ALContext* currentContext;
+@property(nonatomic,readwrite,assign) ALContext* currentContext;
 
 /** Name of the default capture device. */
-@property(nonatomic,readonly) NSString* defaultCaptureDeviceSpecifier;
+@property(nonatomic,readonly,retain) NSString* defaultCaptureDeviceSpecifier;
 
 /** Name of the default playback device. */
-@property(nonatomic,readonly) NSString* defaultDeviceSpecifier;
+@property(nonatomic,readonly,retain) NSString* defaultDeviceSpecifier;
 
 /** List of all open devices (ALDevice*). */
-@property(nonatomic,readonly) NSArray* devices;
+@property(nonatomic,readonly,retain) NSArray* devices;
 
 /** The frequency of the output mixer. */
-@property(readwrite,assign) ALdouble mixerOutputFrequency;
+@property(nonatomic,readwrite,assign) ALdouble mixerOutputFrequency;
+
+/** The rendering quality.
+ *
+ * Can be one of:
+ * - ALC_MAC_OSX_SPATIAL_RENDERING_QUALITY_HIGH
+ * - ALC_MAC_OSX_SPATIAL_RENDERING_QUALITY_LOW
+ * - ALC_IPHONE_SPATIAL_RENDERING_QUALITY_HEADPHONES (iOS only)
+ */
+@property(nonatomic,readwrite,assign) ALint renderingQuality;
 
 
 #pragma mark Object Management
@@ -225,6 +238,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_HEADER(OpenALManager);
 
 #pragma mark Internal Use
 
+/** \cond */
 /** (INTERNAL USE) Notify that a device is initializing.
  */
 - (void) notifyDeviceInitializing:(ALDevice*) device;
@@ -232,5 +246,6 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_HEADER(OpenALManager);
 /** (INTERNAL USE) Notify that a device is deallocating.
  */
 - (void) notifyDeviceDeallocating:(ALDevice*) device;
+/** \endcond */
 
 @end

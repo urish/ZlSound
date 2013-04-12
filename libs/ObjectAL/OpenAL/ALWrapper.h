@@ -30,6 +30,11 @@
 #import <Foundation/Foundation.h>
 #import <OpenAL/al.h>
 #import <OpenAL/alc.h>
+#ifdef __IPHONE_OS_VERSION_MAX_ALLOWED
+#import <OpenAL/oalMacOSX_OALExtensions.h>
+#else
+#import <OpenAL/MacOSX_OALExtensions.h>
+#endif
 
 
 /**
@@ -979,7 +984,7 @@
  *
  * @param frequency The output data rate (frequency).
  */
-+ (void) setMixerOutputDataRate:(ALdouble) frequency;
++ (bool) setMixerOutputDataRate:(ALdouble) frequency;
 
 /** Load data into a buffer. Unlike "bufferData", with this method the buffer will
  * use the passed in data buffer direcly rather than allocating its own memory
@@ -1093,5 +1098,52 @@
  * @return TRUE if the operation was successful.
  */
 + (bool) asaSourcef:(ALuint) sourceId property:(ALuint) property value:(ALfloat) value;
+
+/** Set the rendering quality. The value may be one of:
+ *
+ * ALC_MAC_OSX_SPATIAL_RENDERING_QUALITY_HIGH
+ * ALC_MAC_OSX_SPATIAL_RENDERING_QUALITY_LOW
+ * ALC_IPHONE_SPATIAL_RENDERING_QUALITY_HEADPHONES (iOS only)
+ *
+ * @param quality The quality.
+ */
++ (bool) setRenderingQuality:(ALint) quality;
+
+/** Get the rendering quality.
+ *
+ * @return The current rendering quality.
+ */
++ (ALint) getRenderingQuality;
+
+/** Add a notification callback to a source.
+ *
+ * The following notification types are recognized:
+ * AL_SOURCE_STATE - Sent when a source's state changes.
+ * AL_BUFFERS_PROCESSED - Sent when all buffers have been processed.
+ * AL_QUEUE_HAS_LOOPED - Sent when a looping source has looped to it's start point.
+ *
+ * @param notificationID The kind of notification to be informed of (see above).
+ * @param source The source ID.
+ * @param callback The function to call for notification.
+ * @param userData a pointer that will be passed to the callback.
+ * @return TRUE if the operation was successful.
+ */
++ (bool) addNotification:(ALuint) notificationID
+                onSource:(ALuint) source
+                callback:(alSourceNotificationProc) callback
+                userData:(void*) userData;
+
+/** Remove a notification callback from a source.
+ *
+ * @param notificationID The kind of notification (see addNotification).
+ * @param source The source ID.
+ * @param callback The function to be unregistered.
+ * @param userData not actually needed but part of the API.
+ * @return TRUE if the operation was successful.
+ */
++ (bool) removeNotification:(ALuint) notificationID
+                   onSource:(ALuint) source
+                   callback:(alSourceNotificationProc) callback
+                   userData:(void*) userData;
 
 @end

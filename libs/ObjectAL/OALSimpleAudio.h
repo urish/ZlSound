@@ -70,7 +70,7 @@
 	ALChannelSource* channel;
 	/** Cache for preloaded sound samples. */
 	NSMutableDictionary* preloadCache;
-#if NS_BLOCKS_AVAILABLE && OBJECTAL_USE_BLOCKS
+#if NS_BLOCKS_AVAILABLE && OBJECTAL_CFG_USE_BLOCKS
 	/** Queue for preloading and async operations that use blocks.
 	 * This ensures all operations are safe because they are guaranteed to run
 	 * in order.
@@ -97,11 +97,13 @@
  *
  * If allowIpod = NO, the application will ALWAYS use hardware decoding. <br>
  *
+ * iOS Only. <br>
+ *
  * @see useHardwareIfAvailable
  *
  * Default value: YES
  */
-@property(readwrite,assign) bool allowIpod;
+@property(nonatomic,readwrite,assign) bool allowIpod;
 
 /** Determines what to do if no other application is playing audio and allowIpod = YES
  * (NOT SUPPORTED ON THE SIMULATOR). <br>
@@ -116,81 +118,85 @@
  *
  * Note: This switch has no effect if allowIpod = NO. <br>
  *
+ * iOS Only. <br>
+ *
  * @see allowIpod
  *
  * Default value: YES
  */
-@property(readwrite,assign) bool useHardwareIfAvailable;
+@property(nonatomic,readwrite,assign) bool useHardwareIfAvailable;
 
 /** If true, mute when backgrounded, screen locked, or the ringer switch is
  * turned off (NOT SUPPORTED ON THE SIMULATOR). <br>
  *
+ * iOS Only. <br>
+ *
  * Default value: YES
  */
-@property(readwrite,assign) bool honorSilentSwitch;
+@property(nonatomic,readwrite,assign) bool honorSilentSwitch;
 
 /** The number of sources OALSimpleAudio is using (max 32 on current iOS devices). */
-@property(readwrite,assign) int reservedSources;
+@property(nonatomic,readwrite,assign) int reservedSources;
 
-@property(nonatomic,readonly) ALDevice* device;
+@property(nonatomic,readonly,retain) ALDevice* device;
 
-@property(nonatomic,readonly) ALContext* context;
+@property(nonatomic,readonly,retain) ALContext* context;
 
 /** The channel source used by OALSimpleAudio.
  * Only mess with this if you know what you are doing!
  */
-@property(nonatomic,readonly) ALChannelSource* channel;
+@property(nonatomic,readonly,retain) ALChannelSource* channel;
 
 /** Background audio URL */
-@property(nonatomic,readonly) NSURL* backgroundTrackURL;
+@property(nonatomic,readonly,retain) NSURL* backgroundTrackURL;
 
 /** Background audio track */
-@property(nonatomic,readonly) OALAudioTrack* backgroundTrack;
+@property(nonatomic,readonly,retain) OALAudioTrack* backgroundTrack;
 
 /** Pauses BG music playback */
-@property(readwrite,assign) bool bgPaused;
+@property(nonatomic,readwrite,assign) bool bgPaused;
 
 /** Mutes BG music playback */
-@property(readwrite,assign) bool bgMuted;
+@property(nonatomic,readwrite,assign) bool bgMuted;
 
 /** If true, BG music is currently playing */
-@property(nonatomic,readonly) bool bgPlaying;
+@property(nonatomic,readonly,assign) bool bgPlaying;
 
 /** Background music playback gain/volume (0.0 - 1.0) */
-@property(readwrite,assign) float bgVolume;
+@property(nonatomic,readwrite,assign) float bgVolume;
 
 /** Pauses effects playback */
-@property(readwrite,assign) bool effectsPaused;
+@property(nonatomic,readwrite,assign) bool effectsPaused;
 
 /** Mutes effects playback */
-@property(readwrite,assign) bool effectsMuted;
+@property(nonatomic,readwrite,assign) bool effectsMuted;
 
 /** Master effects gain/volume (0.0 - 1.0) */
-@property(readwrite,assign) float effectsVolume;
+@property(nonatomic,readwrite,assign) float effectsVolume;
 
 /** Pauses everything */
-@property(readwrite,assign) bool paused;
+@property(nonatomic,readwrite,assign) bool paused;
 
 /** Mutes all audio */
-@property(readwrite,assign) bool muted;
+@property(nonatomic,readwrite,assign) bool muted;
 
 /** Enables/disables the preload cache.
  * If the preload cache is disabled, effects preloading will do nothing
  * (BG preloading will still work).
  */
-@property(readwrite,assign) bool preloadCacheEnabled;
+@property(nonatomic,readwrite,assign) bool preloadCacheEnabled;
 
 /** The number of items currently in the preload cache. */
-@property(nonatomic,readonly) NSUInteger preloadCacheCount;
+@property(nonatomic,readonly,assign) NSUInteger preloadCacheCount;
 
 /** Set to YES to manually suspend the sound system. */
-@property(readwrite,assign) bool manuallySuspended;
+@property(nonatomic,readwrite,assign) bool manuallySuspended;
 
-/** If YES, the sound system is interrupted. */
-@property(nonatomic,readonly) bool interrupted;
+/** If YES, the sound system is interrupted. iOS Only. */
+@property(nonatomic,readonly,assign) bool interrupted;
 
 /** If YES, the sound system is suspended. */
-@property(nonatomic,readonly) bool suspended;
+@property(nonatomic,readonly,assign) bool suspended;
 
 
 
@@ -242,6 +248,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_HEADER(OALSimpleAudio);
                                           monoSources:(int) monoSources
                                         stereoSources:(int) stereoSources;
 
+/** \cond */
 /** (INTERNAL USE) Initialize with the specified number of reserved sources.
  *
  * @param reservedSources the number of sources to reserve when initializing.
@@ -259,6 +266,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_HEADER(OALSimpleAudio);
 - (id) initWithReservedSources:(int) reservedSources
                    monoSources:(int) monoSources
                  stereoSources:(int) stereoSources;
+/** \endcond */
 
 
 #pragma mark Background Music
@@ -374,7 +382,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_HEADER(OALSimpleAudio);
  */
 - (ALBuffer*) preloadEffect:(NSString*) filePath reduceToMono:(bool) reduceToMono;
 
-#if NS_BLOCKS_AVAILABLE && OBJECTAL_USE_BLOCKS
+#if NS_BLOCKS_AVAILABLE && OBJECTAL_CFG_USE_BLOCKS
 
 /** Asynchronous preload and cache sound effect for later playback.
  *

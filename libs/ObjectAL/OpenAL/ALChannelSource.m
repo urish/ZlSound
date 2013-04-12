@@ -29,6 +29,7 @@
 
 #import "ALChannelSource.h"
 #import "ObjectALMacros.h"
+#import "ARCSafe_MemMgmt.h"
 #import "OpenALManager.h"
 
 
@@ -36,7 +37,7 @@
 #define SYNTHESIZE_DELEGATE_PROPERTY(NAME, CAPSNAME, TYPE) \
 - (TYPE) NAME \
 { \
-	OPTIONALLY_SYNCHRONIZED(self) \
+	OPTIONALLY_SYNCHRONIZED(sourcePool) \
 	{ \
 		return NAME; \
 	} \
@@ -44,7 +45,7 @@
  \
 - (void) set##CAPSNAME:(TYPE) value \
 { \
-	OPTIONALLY_SYNCHRONIZED(self) \
+	OPTIONALLY_SYNCHRONIZED(sourcePool) \
 	{ \
 		NAME = value; \
 		for(id<ALSoundSource> source in sourcePool.sources) \
@@ -59,6 +60,7 @@
 #pragma mark -
 #pragma mark Private Methods
 
+/** \cond */
 /**
  * (INTERNAL USE) Private methods for ALChannelSource.
  */
@@ -81,6 +83,7 @@
 - (void) setDefaultsFromChannel:(ALChannelSource*) channel;
 
 @end
+/** \endcond */
 
 
 @implementation ALChannelSource
@@ -89,7 +92,7 @@
 
 + (id) channelWithSources:(int) reservedSources
 {
-	return arcsafe_autorelease([[self alloc] initWithSources:reservedSources]);
+	return as_autorelease([[self alloc] initWithSources:reservedSources]);
 }
 
 - (id) initWithSources:(int) reservedSources
@@ -98,7 +101,7 @@
 	{
 		OAL_LOG_DEBUG(@"%@: Init with %d sources", self, reservedSources);
 
-		context = arcsafe_retain([OpenALManager sharedInstance].currentContext);
+		context = as_retain([OpenALManager sharedInstance].currentContext);
 
 		sourcePool = [[ALSoundSourcePool alloc] init];
 
@@ -114,10 +117,10 @@
 {
 	OAL_LOG_DEBUG(@"%@: Dealloc", self);
 	
-	arcsafe_release(sourcePool);
-	arcsafe_release(context);
+	as_release(sourcePool);
+	as_release(context);
 
-    arcsafe_super_dealloc();
+    as_superdealloc();
 }
 
 - (int) reservedSources
@@ -167,15 +170,12 @@
 
 - (int) sourceType
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return sourceType;
-	}
+    return sourceType;
 }
 
 - (bool) playing
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(sourcePool)
 	{
 		for(id<ALSoundSource> source in sourcePool.sources)
 		{
@@ -246,7 +246,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 
 - (id<ALSoundSource>) play:(ALBuffer*) buffer loop:(bool) loop
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(sourcePool)
 	{
 		// Try to find a free source for playback.
 		// If this channel is not interruptible, it will not attempt to interrupt its contained sources.
@@ -257,7 +257,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 
 - (id<ALSoundSource>) play:(ALBuffer*) buffer gain:(float) gainIn pitch:(float) pitchIn pan:(float) panIn loop:(bool) loop
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(sourcePool)
 	{
 		// Try to find a free source for playback.
 		// If this channel is not interruptible, it will not attempt to interrupt its contained sources.
@@ -268,7 +268,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 
 - (void) stop
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(sourcePool)
 	{
         [sourcePool.sources makeObjectsPerformSelector:@selector(stop)];
 	}
@@ -276,7 +276,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 
 - (void) rewind
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(sourcePool)
 	{
         [sourcePool.sources makeObjectsPerformSelector:@selector(rewind)];
 	}
@@ -285,7 +285,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 - (void) fadeTo:(float) value duration:(float) duration target:(id) target selector:(SEL) selector
 {
 	// Must always be synchronized
-	@synchronized(self)
+	@synchronized(sourcePool)
 	{
 		[self stopFade];
 		fadeCompleteTarget = target;
@@ -304,7 +304,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 {
     #pragma unused(source)
 	// Must always be synchronized
-	@synchronized(self)
+	@synchronized(sourcePool)
 	{
 		currentFadeCallbackCount++;
 		if(currentFadeCallbackCount == expectedFadeCallbackCount)
@@ -320,7 +320,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 - (void) stopFade
 {
 	// Must always be synchronized
-	@synchronized(self)
+	@synchronized(sourcePool)
 	{
 		[sourcePool.sources makeObjectsPerformSelector:@selector(stopFade)];
 	}
@@ -329,7 +329,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 - (void) panTo:(float) value duration:(float) duration target:(id) target selector:(SEL) selector
 {
 	// Must always be synchronized
-	@synchronized(self)
+	@synchronized(sourcePool)
 	{
 		[self stopPan];
 		panCompleteTarget = target;
@@ -348,7 +348,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 {
     #pragma unused(source)
 	// Must always be synchronized
-	@synchronized(self)
+	@synchronized(sourcePool)
 	{
 		currentPanCallbackCount++;
 		if(currentPanCallbackCount == expectedPanCallbackCount)
@@ -364,7 +364,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 - (void) stopPan
 {
 	// Must always be synchronized
-	@synchronized(self)
+	@synchronized(sourcePool)
 	{
 		[sourcePool.sources makeObjectsPerformSelector:@selector(stopPan)];
 	}
@@ -373,7 +373,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 - (void) pitchTo:(float) value duration:(float) duration target:(id) target selector:(SEL) selector
 {
 	// Must always be synchronized
-	@synchronized(self)
+	@synchronized(sourcePool)
 	{
 		[self stopPitch];
 		pitchCompleteTarget = target;
@@ -392,7 +392,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 {
     #pragma unused(source)
 	// Must always be synchronized
-	@synchronized(self)
+	@synchronized(sourcePool)
 	{
 		currentPitchCallbackCount++;
 		if(currentPitchCallbackCount == expectedPitchCallbackCount)
@@ -408,7 +408,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 - (void) stopPitch
 {
 	// Must always be synchronized
-	@synchronized(self)
+	@synchronized(sourcePool)
 	{
 		[sourcePool.sources makeObjectsPerformSelector:@selector(stopPitch)];
 	}
@@ -417,7 +417,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 - (void) stopActions
 {
 	// Must always be synchronized
-	@synchronized(self)
+	@synchronized(sourcePool)
 	{
 		[sourcePool.sources makeObjectsPerformSelector:@selector(stopActions)];
 	}
@@ -426,7 +426,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 
 - (void) clear
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(sourcePool)
 	{
         [sourcePool.sources makeObjectsPerformSelector:@selector(clear)];
 	}
@@ -434,7 +434,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 
 - (void) setDefaultsFromSource:(id<ALSoundSource>) source
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(sourcePool)
 	{
         defaultPitch = source.pitch;
         defaultGain = source.gain;
@@ -459,7 +459,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 
 - (void) setDefaultsFromChannel:(ALChannelSource*) channel
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(sourcePool)
 	{
         defaultPitch = channel->defaultPitch;
         defaultGain = channel->defaultGain;
@@ -486,7 +486,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 
 - (void) resetToDefault
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(sourcePool)
 	{
         self.pitch = defaultPitch;
         self.gain = defaultGain;
@@ -512,7 +512,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 
 - (void) addSource:(id<ALSoundSource>) source
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(sourcePool)
 	{
         if(nil == source)
         {
@@ -548,7 +548,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 
 - (id<ALSoundSource>) removeSource:(id<ALSoundSource>) source
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(sourcePool)
 	{
         if(nil == source)
         {
@@ -558,7 +558,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
                 return nil;
             }
         }
-        arcsafe_autorelease_unused(arcsafe_retain(source));
+        as_autorelease_noref(as_retain(source));
         [sourcePool removeSource:source];
     }
     
@@ -569,7 +569,7 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 {
     ALChannelSource* newChannel;
 
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(sourcePool)
 	{
         newChannel = [ALChannelSource channelWithSources:0];
         [newChannel setDefaultsFromChannel:self];
@@ -592,13 +592,56 @@ SYNTHESIZE_DELEGATE_PROPERTY(reverbObstruction, ReverbObstruction, float);
 {
     id<ALSoundSource> source;
     
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(sourcePool)
 	{
         while (nil != (source = [channel removeSource:nil]))
         {
             [self addSource:source];
         }
     }
+}
+
+- (NSArray*) clearUnusedBuffers
+{
+    NSMutableArray* removed = [NSMutableArray arrayWithCapacity:[sourcePool.sources count]];
+	OPTIONALLY_SYNCHRONIZED(sourcePool)
+	{
+        for(ALSource* source in sourcePool.sources)
+        {
+            if([source isKindOfClass:[ALSource class]] &&
+               !source.playing &&
+               source.buffer != nil)
+            {
+                [removed addObject:source.buffer];
+                source.buffer = nil;
+            }
+        }
+    }
+    return removed;
+}
+
+- (BOOL) removeBuffersNamed:(NSString*) name
+{
+    BOOL playing = NO;
+	OPTIONALLY_SYNCHRONIZED(sourcePool)
+	{
+        for(ALSource* source in sourcePool.sources)
+        {
+            if([source isKindOfClass:[ALSource class]] &&
+               [source.buffer.name isEqualToString:name])
+            {
+                if(source.playing)
+                {
+                    playing = YES;
+                }
+                else
+                {
+                    source.buffer = nil;
+                }
+            }
+        }
+    }
+    return !playing;
 }
 
 @end

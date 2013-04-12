@@ -29,20 +29,22 @@
 
 #import "ALSource.h"
 #import "ObjectALMacros.h"
+#import "ARCSafe_MemMgmt.h"
 #import "ALWrapper.h"
 #import "OpenALManager.h"
 #import "OALAudioActions.h"
 #import "OALUtilityActions.h"
-#import <OpenAL/oalMacOSX_OALExtensions.h>
+#import "NSMutableDictionary+WeakReferences.h"
 
 
 #pragma mark -
 #pragma mark Private Methods
 
+/** \cond */
 /**
  * (INTERNAL USE) Private methods for ALSource.
  */
-@interface ALSource (Private)
+@interface ALSource ()
 
 /** (INTERNAL USE) Called by SuspendHandler.
  */
@@ -52,23 +54,46 @@
  * get around OpenAL bug.
  */
 - (void) delayedResumePlayback;
+/** \endcond */
 
+- (void) receiveNotification:(ALuint) notificationID userData:(void*) userData;
+
+@property(nonatomic, readwrite, retain) NSMutableDictionary* notificationCallbacks;
 
 @end
 
 
 @implementation ALSource
 
+static NSMutableDictionary* g_allSourcesByID;
+
+static ALvoid alSourceNotification(ALuint sid, ALuint notificationID, ALvoid* userData)
+{
+    ALSource* source = [g_allSourcesByID objectForKey:[NSNumber numberWithUnsignedInt:sid]];
+    [source receiveNotification:notificationID userData:userData];
+}
+
+
+@synthesize notificationCallbacks = _notificationCallbacks;
+
++ (void) initialize
+{
+    if(g_allSourcesByID == nil)
+    {
+        g_allSourcesByID = [NSMutableDictionary newMutableDictionaryUsingWeakReferencesWithCapacity:32];
+    }
+}
+
 #pragma mark Object Management
 
 + (id) source
 {
-	return arcsafe_autorelease([[self alloc] init]);
+	return as_autorelease([[self alloc] init]);
 }
 
 + (id) sourceOnContext:(ALContext*) context
 {
-	return arcsafe_autorelease([[self alloc] initOnContext:context]);
+	return as_autorelease([[self alloc] initOnContext:context]);
 }
 
 - (id) init
@@ -85,13 +110,14 @@
 		if(nil == contextIn)
 		{
 			OAL_LOG_ERROR(@"%@: Failed to init because context was nil. Returning nil", self);
-			arcsafe_release(self);
+			as_release(self);
 			return nil;
 		}
 		
 		suspendHandler = [[OALSuspendHandler alloc] initWithTarget:self selector:@selector(setSuspended:)];
 
-		context = arcsafe_retain(contextIn);
+        self.notificationCallbacks = [NSMutableDictionary dictionary];
+		context = as_retain(contextIn);
 		@synchronized([OpenALManager sharedInstance])
 		{
 			ALContext* realContext = [OpenALManager sharedInstance].currentContext;
@@ -106,6 +132,7 @@
 		shadowState = AL_INITIAL;
 		
 		[context addSuspendListener:self];
+        [[self class] notifySourceAllocated:self];
 	}
 	return self;
 }
@@ -114,16 +141,19 @@
 {
 	OAL_LOG_DEBUG(@"%@: Dealloc, sourceId = %08x", self, sourceId);
 
+    [[self class] notifySourceDeallocated:self];
+    [self unregisterAllNotifications];
 	[context removeSuspendListener:self];
 	[context notifySourceDeallocating:self];
-	
+
 	[gainAction stopAction];
-	arcsafe_release(gainAction);
+	as_release(gainAction);
 	[panAction stopAction];
-	arcsafe_release(panAction);
+	as_release(panAction);
 	[pitchAction stopAction];
-	arcsafe_release(pitchAction);
-	arcsafe_release(suspendHandler);
+	as_release(pitchAction);
+	as_release(suspendHandler);
+    as_release(_notificationCallbacks);
 
     if((ALuint)AL_INVALID != sourceId)
     {
@@ -145,7 +175,7 @@
         }
     }
 
-	arcsafe_release(context);
+	as_release(context);
 
 	// In IOS 3.x, OpenAL doesn't stop playing right away.
 	// Release after a delay to give it some time to stop.
@@ -153,7 +183,7 @@
 	[buffer performSelector:@selector(release) withObject:nil afterDelay:0.1];
 #endif
 	
-	arcsafe_super_dealloc();
+	as_superdealloc();
 }
 
 
@@ -161,10 +191,7 @@
 
 - (ALBuffer*) buffer
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return buffer;
-	}
+    return buffer;
 }
 
 - (void) setBuffer:(ALBuffer *) value
@@ -185,7 +212,7 @@
 		[buffer performSelector:@selector(release) withObject:nil afterDelay:0.1];
 #endif
 
-		buffer = arcsafe_retain(value);
+		buffer = as_retain(value);
 		[ALWrapper sourcei:sourceId parameter:AL_BUFFER value:(ALint)buffer.bufferId];
 	}
 }
@@ -304,10 +331,7 @@
 
 - (float) gain
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return gain;
-	}
+    return gain;
 }
 
 - (void) setGain:(float) value
@@ -425,10 +449,7 @@
 
 - (bool) muted
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return muted;
-	}
+    return muted;
 }
 
 - (void) setMuted:(bool) value
@@ -876,12 +897,13 @@
 
 - (bool) interrupted
 {
-	return suspendHandler.interrupted;
+	return NO;
 }
 
 - (void) setInterrupted:(bool) value
 {
-	suspendHandler.interrupted = value;
+#pragma unused(value)
+    // Suspending on interrupt fails in iOS 6+ and doesn't seem to be needed anyway
 }
 
 - (bool) suspended
@@ -891,33 +913,39 @@
 
 - (void) setSuspended:(bool) value
 {
-	if(value)
+	OPTIONALLY_SYNCHRONIZED(self)
 	{
-		shadowState = self.state;
-		if(AL_PLAYING == shadowState)
-		{
-			[ALWrapper sourcePause:sourceId];
-		}
-	}
-	else
-	{
-		// The shadow state holds the state we had when suspending.
-		if(AL_PLAYING == shadowState)
-		{
-			// Because Apple's OpenAL implementation can't stack commands (it defers processing
-			// to a later sequence point), we have to delay resuming playback.
-			abortPlaybackResume = NO;
-			[self performSelector:@selector(delayedResumePlayback) withObject:nil afterDelay:0.03];
-		}
-	}
+        if(value)
+        {
+            shadowState = self.state;
+            if(AL_PLAYING == shadowState)
+            {
+                [ALWrapper sourcePause:sourceId];
+            }
+        }
+        else
+        {
+            // The shadow state holds the state we had when suspending.
+            if(AL_PLAYING == shadowState)
+            {
+                // Because Apple's OpenAL implementation can't stack commands (it defers processing
+                // to a later sequence point), we have to delay resuming playback.
+                abortPlaybackResume = NO;
+                [self performSelector:@selector(delayedResumePlayback) withObject:nil afterDelay:0.03];
+            }
+        }
+    }
 }
 
 - (void) delayedResumePlayback
 {
-	if(!abortPlaybackResume)
+	OPTIONALLY_SYNCHRONIZED(self)
 	{
-		[ALWrapper sourcePlay:sourceId];
-	}
+        if(!abortPlaybackResume)
+        {
+            [ALWrapper sourcePlay:sourceId];
+        }
+    }
 }
 
 
@@ -1114,10 +1142,10 @@
 		
 		[self stopFade];
 		gainAction = [OALSequentialActions actions:
-					   [OALGainAction actionWithDuration:duration endValue:value],
-					   [OALCallAction actionWithCallTarget:target selector:selector withObject:self],
-					   nil];
-        arcsafe_retain_unused(gainAction);
+                      [OALPropertyAction gainActionWithDuration:duration endValue:value],
+                      [OALCallAction actionWithCallTarget:target selector:selector withObject:self],
+                      nil];
+        gainAction = as_retain(gainAction);
 		[gainAction runWithTarget:self];
 	}
 }
@@ -1134,7 +1162,7 @@
 		}
 		
 		[gainAction stopAction];
-		arcsafe_release(gainAction);
+		as_release(gainAction);
 		gainAction = nil;
 	}
 }
@@ -1155,10 +1183,10 @@
 		
 		[self stopPan];
 		panAction = [OALSequentialActions actions:
-					   [OALPanAction actionWithDuration:duration endValue:value],
-					   [OALCallAction actionWithCallTarget:target selector:selector withObject:self],
-					   nil];
-        arcsafe_retain_unused(panAction);
+                     [OALPropertyAction panActionWithDuration:duration endValue:value],
+                     [OALCallAction actionWithCallTarget:target selector:selector withObject:self],
+                     nil];
+        panAction = as_retain(panAction);
 		[panAction runWithTarget:self];
 	}
 }
@@ -1175,7 +1203,7 @@
 		}
 		
 		[panAction stopAction];
-		arcsafe_release(panAction);
+		as_release(panAction);
 		panAction = nil;
 	}
 }
@@ -1196,10 +1224,10 @@
 		
 		[self stopPitch];
 		pitchAction = [OALSequentialActions actions:
-					   [OALPitchAction actionWithDuration:duration endValue:value],
+                       [OALPropertyAction pitchActionWithDuration:duration endValue:value],
 					   [OALCallAction actionWithCallTarget:target selector:selector withObject:self],
 					   nil];
-        arcsafe_retain_unused(pitchAction);
+        pitchAction = as_retain(pitchAction);
 		[pitchAction runWithTarget:self];
 	}
 }
@@ -1216,7 +1244,7 @@
 		}
 		
 		[pitchAction stopAction];
-		arcsafe_release(pitchAction);
+		as_release(pitchAction);
 		pitchAction = nil;
 	}
 }
@@ -1355,6 +1383,87 @@
 		return result;
 	}
 }
+
+
+#pragma mark Notifications
+
++ (void) notifySourceAllocated:(ALSource*) source
+{
+    @synchronized(g_allSourcesByID)
+    {
+        [g_allSourcesByID setObject:source forKey:[NSNumber numberWithUnsignedInt:source.sourceId]];
+    }
+}
+
++ (void) notifySourceDeallocated:(ALSource*) source
+{
+    @synchronized(g_allSourcesByID)
+    {
+        [g_allSourcesByID removeObjectForKey:[NSNumber numberWithUnsignedInt:source.sourceId]];
+    }
+}
+
+- (void) registerNotification:(ALuint) notificationID
+                     callback:(OALSourceNotificationCallback) callback
+                     userData:(void*) userData
+{
+    NSNumber* key = [NSNumber numberWithUnsignedInt:notificationID];
+    OPTIONALLY_SYNCHRONIZED(self)
+    {
+        [self unregisterNotification:notificationID];
+        [self.notificationCallbacks setObject:as_autorelease([callback copy])
+                                       forKey:key];
+        [ALWrapper addNotification:notificationID
+                          onSource:self.sourceId
+                          callback:alSourceNotification
+                          userData:userData];
+    }
+}
+
+- (void) unregisterNotification:(ALuint) notificationID
+{
+    NSNumber* key = [NSNumber numberWithUnsignedInt:notificationID];
+    OPTIONALLY_SYNCHRONIZED(self)
+    {
+        if([self.notificationCallbacks objectForKey:key] != nil)
+        {
+            [self.notificationCallbacks removeObjectForKey:key];
+            [ALWrapper removeNotification:notificationID
+                                 onSource:self.sourceId
+                                 callback:alSourceNotification
+                                 userData:NULL];
+        }
+    }
+}
+
+- (void) unregisterAllNotifications
+{
+    OPTIONALLY_SYNCHRONIZED(self)
+    {
+        for(NSNumber* key in [self.notificationCallbacks allKeys])
+        {
+            [ALWrapper removeNotification:[key unsignedIntValue]
+                                 onSource:self.sourceId
+                                 callback:alSourceNotification
+                                 userData:NULL];
+        }
+        [self.notificationCallbacks removeAllObjects];
+    }
+}
+
+- (void) receiveNotification:(ALuint) notificationID userData:(void*) userData
+{
+    NSNumber* key = [NSNumber numberWithUnsignedInt:notificationID];
+    OPTIONALLY_SYNCHRONIZED(self)
+    {
+        OALSourceNotificationCallback callback = [self.notificationCallbacks objectForKey:key];
+        if(callback != nil)
+        {
+            callback(self, notificationID, userData);
+        }
+    }
+}
+
 
 #pragma mark Internal Use
 

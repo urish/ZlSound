@@ -32,9 +32,9 @@
 #import "OALAction.h"
 #import "ObjectALConfig.h"
 
-/* This object is only available if OBJECTAL_USE_COCOS2D_ACTIONS is enabled in ObjectALConfig.h.
+/* This object is only available if OBJECTAL_CFG_USE_COCOS2D_ACTIONS is enabled in ObjectALConfig.h.
  */
-#if !OBJECTAL_USE_COCOS2D_ACTIONS
+#if !OBJECTAL_CFG_USE_COCOS2D_ACTIONS
 
 
 #pragma mark OALActionManager
@@ -83,6 +83,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_HEADER(OALActionManager);
 
 #pragma mark Internal Use
 
+/** \cond */
 /** (INTERNAL USE) Used by OALAction to announce that it is starting.
  *
  * @param action The action that is starting.
@@ -94,7 +95,8 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_HEADER(OALActionManager);
  * @param action The action that is stopping.
  */
 - (void) notifyActionStopped:(OALAction*) action;
+/** \endcond */
 
 @end
 
-#endif /* OBJECTAL_USE_COCOS2D_ACTIONS */
+#endif /* OBJECTAL_CFG_USE_COCOS2D_ACTIONS */

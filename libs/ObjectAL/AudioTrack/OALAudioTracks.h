@@ -52,13 +52,20 @@
 #pragma mark Properties
 
 /** Pauses/unpauses all audio tracks. */
-@property(readwrite,assign) bool paused;
+@property(nonatomic,readwrite,assign) bool paused;
 
 /** Mutes/unmutes all audio tracks. */
-@property(readwrite,assign) bool muted;
+@property(nonatomic,readwrite,assign) bool muted;
 
 /** All instantiated audio tracks. */
-@property(nonatomic,readonly) NSArray* tracks;
+@property(nonatomic,readonly,retain) NSArray* tracks;
+
+
+#pragma mark Playback
+
+/** Stop playback on all audio tracks.
+ */
+- (void) stopAllTracks;
 
 
 #pragma mark Object Management
@@ -73,6 +80,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_HEADER(OALAudioTracks);
 
 #pragma mark Internal Use
 
+/** \cond */
 /** (INTERNAL USE) Notify that a track is initializing.
  */
 - (void) notifyTrackInitializing:(OALAudioTrack*) track;
@@ -80,5 +88,6 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_HEADER(OALAudioTracks);
 /** (INTERNAL USE) Notify that a track is deallocating.
  */
 - (void) notifyTrackDeallocating:(OALAudioTrack*) track;
+/** \endcond */
 
 @end

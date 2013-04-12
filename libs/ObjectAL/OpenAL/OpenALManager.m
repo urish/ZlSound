@@ -30,6 +30,7 @@
 #import "OpenALManager.h"
 #import "NSMutableArray+WeakReferences.h"
 #import "ObjectALMacros.h"
+#import "ARCSafe_MemMgmt.h"
 #import "ALWrapper.h"
 #import "ALDevice.h"
 #import "OALAudioSession.h"
@@ -39,6 +40,7 @@
 #pragma mark -
 #pragma mark Asynchronous Operations
 
+/** \cond */
 /**
  * (INTERNAL USE) NSOperation for loading audio files asynchronously.
  */
@@ -89,7 +91,7 @@
 				 target:(id) target
 			   selector:(SEL) selector
 {
-	return arcsafe_autorelease([[self alloc] initWithUrl:url
+	return as_autorelease([[self alloc] initWithUrl:url
                                             reduceToMono:reduceToMono
                                                   target:target
                                                 selector:selector]);
@@ -102,7 +104,7 @@
 {
 	if(nil != (self = [super init]))
 	{
-		url = arcsafe_retain(urlIn);
+		url = as_retain(urlIn);
 		reduceToMono = reduceToMonoIn;
 		target = targetIn;
 		selector = selectorIn;
@@ -112,8 +114,8 @@
 
 - (void) dealloc
 {
-	arcsafe_release(url);
-	arcsafe_super_dealloc();
+	as_release(url);
+	as_superdealloc();
 }
 
 - (void)main
@@ -133,13 +135,18 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_PROTOTYPE(OpenALManager);
 /**
  * (INTERNAL USE) Private methods for OpenALManager.
  */
-@interface OpenALManager (Private)
+@interface OpenALManager ()
 
 /** (INTERNAL USE) Called by SuspendHandler.
  */
 - (void) setSuspended:(bool) value;
 
+/** (INTERNAL USE) Real reference to the current context.
+ */
+@property(nonatomic,readwrite,assign) ALContext* realCurrentContext;
+
 @end
+/** \endcond */
 
 
 #pragma mark -
@@ -152,6 +159,8 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_PROTOTYPE(OpenALManager);
 #pragma mark Object Management
 
 SYNTHESIZE_SINGLETON_FOR_CLASS(OpenALManager);
+
+@synthesize realCurrentContext;
 
 - (id) init
 {
@@ -175,10 +184,10 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OpenALManager);
 	OAL_LOG_DEBUG(@"%@: Dealloc", self);
 	[[OALAudioSession sharedInstance] removeSuspendListener:self];
 
-	arcsafe_release(operationQueue);
-	arcsafe_release(suspendHandler);
-	arcsafe_release(devices);
-	arcsafe_super_dealloc();
+	as_release(operationQueue);
+	as_release(suspendHandler);
+	as_release(devices);
+	as_superdealloc();
 }
 
 
@@ -198,7 +207,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OpenALManager);
 {
 	OPTIONALLY_SYNCHRONIZED(self)
 	{
-		return currentContext;
+		return self.realCurrentContext;
 	}
 }
 
@@ -212,8 +221,9 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OpenALManager);
 			return;
 		}
 		
-		currentContext = context;
-		[ALWrapper makeContextCurrent:currentContext.context deviceReference:currentContext.device.device];
+		self.realCurrentContext = context;
+		[ALWrapper makeContextCurrent:self.realCurrentContext.context
+                      deviceReference:self.realCurrentContext.device.device];
 	}
 }
 
@@ -246,8 +256,30 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OpenALManager);
 			OAL_LOG_DEBUG(@"%@: Called mutator on suspended object", self);
 			return;
 		}
-		
+
 		[ALWrapper setMixerOutputDataRate:frequency];
+	}
+}
+
+- (ALint) renderingQuality
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+		return [ALWrapper getRenderingQuality];
+	}
+}
+
+- (void) setRenderingQuality:(ALint) renderingQuality
+{
+	OPTIONALLY_SYNCHRONIZED(self)
+	{
+		if(self.suspended)
+		{
+			OAL_LOG_DEBUG(@"%@: Called mutator on suspended object", self);
+			return;
+		}
+
+		[ALWrapper setRenderingQuality:renderingQuality];
 	}
 }
 
@@ -297,8 +329,8 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OpenALManager);
 	}
 	else
 	{
-		[ALWrapper makeContextCurrent:currentContext.context
-					  deviceReference:currentContext.device.device];
+		[ALWrapper makeContextCurrent:self.realCurrentContext.context
+					  deviceReference:self.realCurrentContext.device.device];
 	}
 }
 
@@ -379,7 +411,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OpenALManager);
 
 - (void) clearAllBuffers
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(devices)
 	{
 		for(ALDevice* device in devices)
 		{
@@ -392,7 +424,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OpenALManager);
 
 - (void) notifyDeviceInitializing:(ALDevice*) device
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(devices)
 	{
 		[devices addObject:device];
 	}
@@ -400,7 +432,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OpenALManager);
 
 - (void) notifyDeviceDeallocating:(ALDevice*) device
 {
-	OPTIONALLY_SYNCHRONIZED(self)
+	OPTIONALLY_SYNCHRONIZED(devices)
 	{
 		[devices removeObject:device];
 	}

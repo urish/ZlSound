@@ -29,6 +29,7 @@
 
 #import "OALSimpleAudio.h"
 #import "ObjectALMacros.h"
+#import "ARCSafe_MemMgmt.h"
 #import "OALAudioSession.h"
 #import "OpenALManager.h"
 
@@ -40,6 +41,7 @@
 
 SYNTHESIZE_SINGLETON_FOR_CLASS_PROTOTYPE(OALSimpleAudio);
 
+/** \cond */
 /**
  * (INTERNAL USE) Private interface to OALSimpleAudio.
  */
@@ -55,6 +57,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS_PROTOTYPE(OALSimpleAudio);
 - (ALBuffer*) internalPreloadEffect:(NSString*) filePath reduceToMono:(bool) reduceToMono;
 
 @end
+/** \endcond */
 
 #pragma mark -
 #pragma mark OALSimpleAudio
@@ -70,16 +73,16 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 
 + (OALSimpleAudio*) sharedInstanceWithSources:(int) sources
 {
-	return arcsafe_autorelease([[self alloc] initWithSources:sources]);
+	return as_autorelease([[self alloc] initWithSources:sources]);
 }
 
 + (OALSimpleAudio*) sharedInstanceWithReservedSources:(int) reservedSources
                                           monoSources:(int) monoSources
                                         stereoSources:(int) stereoSources
 {
-    return arcsafe_autorelease([[self alloc] initWithReservedSources:reservedSources
-                                                         monoSources:monoSources
-                                                       stereoSources:stereoSources]);
+    return as_autorelease([[self alloc] initWithReservedSources:reservedSources
+                                                    monoSources:monoSources
+                                                  stereoSources:stereoSources]);
 }
 
 - (id) init
@@ -91,14 +94,14 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 {
     [OpenALManager sharedInstance].currentContext = context;
     channel = [[ALChannelSource alloc] initWithSources:reservedSources];
-    
+
     backgroundTrack = [[OALAudioTrack alloc] init];
-    
-#if NS_BLOCKS_AVAILABLE && OBJECTAL_USE_BLOCKS
+
+#if NS_BLOCKS_AVAILABLE && OBJECTAL_CFG_USE_BLOCKS
     oal_dispatch_queue	= dispatch_queue_create("objectal.simpleaudio.queue", NULL);
 #endif
     pendingLoadCount	= 0;
-    
+
     self.preloadCacheEnabled = YES;
     self.bgVolume = 1.0f;
     self.effectsVolume = 1.0f;
@@ -139,17 +142,17 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 - (void) dealloc
 {
 	OAL_LOG_DEBUG(@"%@: Dealloc", self);
-#if NS_BLOCKS_AVAILABLE && OBJECTAL_USE_BLOCKS
+#if NS_BLOCKS_AVAILABLE && OBJECTAL_CFG_USE_BLOCKS
 	dispatch_release(oal_dispatch_queue);
 #endif
-	
-	arcsafe_release(backgroundTrack);
+
+	as_release(backgroundTrack);
 	[channel stop];
-	arcsafe_release(channel);
-	arcsafe_release(context);
-	arcsafe_release(device);
-	arcsafe_release(preloadCache);
-	arcsafe_super_dealloc();
+	as_release(channel);
+	as_release(context);
+	as_release(device);
+	as_release(preloadCache);
+	as_superdealloc();
 }
 
 #pragma mark Properties
@@ -164,10 +167,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 
 - (bool) preloadCacheEnabled
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return nil != preloadCache;
-	}
+    return nil != preloadCache;
 }
 
 - (void) setPreloadCacheEnabled:(bool) value
@@ -189,7 +189,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 				}
 				else
 				{
-					arcsafe_release(preloadCache);
+					as_release(preloadCache);
 					preloadCache = nil;
 				}
 			}
@@ -311,10 +311,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 
 - (bool) bgMuted
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return bgMuted;
-	}
+    return bgMuted;
 }
 
 - (void) setBgMuted:(bool) value
@@ -328,10 +325,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 
 - (bool) effectsMuted
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return effectsMuted;
-	}
+    return effectsMuted;
 }
 
 - (void) setEffectsMuted:(bool) value
@@ -345,10 +339,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 
 - (bool) muted
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return muted;
-	}
+    return muted;
 }
 
 - (void) setMuted:(bool) value
@@ -359,7 +350,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 		backgroundTrack.muted = bgMuted | muted;
 		[OpenALManager sharedInstance].currentContext.listener.muted = effectsMuted | muted;
 	}
-}	
+}
 
 #pragma mark Background Music
 
@@ -425,7 +416,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 {
 	OPTIONALLY_SYNCHRONIZED(self)
 	{
-		OAL_LOG_DEBUG(@"Play bg, loop %d");
+		OAL_LOG_DEBUG(@"Play bg, loop %d", loop);
 		backgroundTrack.numberOfLoops = loop ? -1 : 0;
 		return [backgroundTrack play];
 	}
@@ -440,12 +431,23 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 
 #pragma mark Sound Effects
 
+- (NSString*) cacheKeyForBuffer:(ALBuffer*) buffer
+{
+    return buffer.name;
+}
+
+- (NSString*) cacheKeyForEffectPath:(NSString*) filePath
+{
+    return [[OALTools urlForPath:filePath] description];
+}
+
 - (ALBuffer*) internalPreloadEffect:(NSString*) filePath reduceToMono:(bool) reduceToMono
 {
 	ALBuffer* buffer;
+    NSString* cacheKey = [self cacheKeyForEffectPath:filePath];
 	OPTIONALLY_SYNCHRONIZED(self)
 	{
-		buffer = [preloadCache objectForKey:filePath];
+		buffer = [preloadCache objectForKey:cacheKey];
 	}
 	if(nil == buffer)
 	{
@@ -456,13 +458,14 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 			OAL_LOG_ERROR(@"Could not load effect %@", filePath);
 			return nil;
 		}
-        
+
+        buffer.name = cacheKey;
 		OPTIONALLY_SYNCHRONIZED(self)
 		{
-			[preloadCache setObject:buffer forKey:filePath];
+			[preloadCache setObject:buffer forKey:cacheKey];
 		}
 	}
-    
+
 	return buffer;
 }
 
@@ -478,13 +481,13 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 		OAL_LOG_ERROR(@"filePath was NULL");
 		return nil;
 	}
-    
+
     if(pendingLoadCount > 0)
     {
         OAL_LOG_WARNING(@"You are loading an effect synchronously, but have pending async loads that have not completed. Your load will happen after those finish. Your thread is now stuck waiting. Next time just load everything async please.");
     }
-    
-#if NS_BLOCKS_AVAILABLE && OBJECTAL_USE_BLOCKS
+
+#if NS_BLOCKS_AVAILABLE && OBJECTAL_CFG_USE_BLOCKS
 	//Using blocks with the same queue used to asynch load removes the need for locking
 	//BUT be warned that if you had called preloadEffects and then called this method, your app will stall until all of the loading is done.
 	//It is advised you just always use async loading
@@ -501,7 +504,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 #endif
 }
 
-#if NS_BLOCKS_AVAILABLE && OBJECTAL_USE_BLOCKS
+#if NS_BLOCKS_AVAILABLE && OBJECTAL_CFG_USE_BLOCKS
 
 - (BOOL) preloadEffect:(NSString*) filePath
           reduceToMono:(bool) reduceToMono
@@ -513,12 +516,12 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 		completionBlock(nil);
 		return NO;
 	}
-	
+
 	pendingLoadCount++;
 	dispatch_async(oal_dispatch_queue,
                    ^{
                        OAL_LOG_INFO(@"Preloading effect: %@", filePath);
-                       
+
                        ALBuffer *retBuffer = [self internalPreloadEffect:filePath reduceToMono:reduceToMono];
                        if(!retBuffer)
                        {
@@ -544,14 +547,15 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 		progressBlock(0,0,0);
 		return;
 	}
-	
+
 	__block uint successCount	= 0;
-	
+
 	pendingLoadCount			+= total;
 	dispatch_async(oal_dispatch_queue,
                    ^{
                        [filePaths enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop)
                         {
+                            #pragma unused(stop)
                             OAL_LOG_INFO(@"Preloading effect: %@", obj);
                             ALBuffer *result = [self internalPreloadEffect:(NSString *)obj reduceToMono:reduceToMono];
                             if(!result)
@@ -563,7 +567,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
                                 successCount++;
                             }
                             uint cnt = idx+1;
-                            dispatch_async(dispatch_get_main_queue(), 
+                            dispatch_async(dispatch_get_main_queue(),
                                            ^{
                                                if(cnt == total)
                                                {
@@ -583,28 +587,15 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 		OAL_LOG_ERROR(@"filePath was NULL");
 		return NO;
 	}
-    NSString* name = [[OALTools urlForPath:filePath] description];
+    NSString* cacheKey = [self cacheKeyForEffectPath:filePath];
 	OAL_LOG_DEBUG(@"Remove effect from cache: %@", filePath);
     bool isSuccess = YES;
 	OPTIONALLY_SYNCHRONIZED(self)
 	{
-        for(ALSource* source in channel.sourcePool.sources)
-        {
-            if([source.buffer.name isEqualToString:name])
-            {
-                if(source.playing)
-                {
-                    isSuccess = NO;
-                }
-                else
-                {
-                    source.buffer = nil;
-                }
-            }
-        }
+        isSuccess = [channel removeBuffersNamed:cacheKey];
         if(isSuccess)
         {
-            [preloadCache removeObjectForKey:filePath];
+            [preloadCache removeObjectForKey:cacheKey];
         }
 	}
     if(!isSuccess)
@@ -617,27 +608,13 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 - (void) unloadAllEffects
 {
     OAL_LOG_DEBUG(@"Remove all effects from cache");
-    NSMutableDictionary* stillPlaying = [NSMutableDictionary dictionary];
 	OPTIONALLY_SYNCHRONIZED(self)
 	{
-        for(ALSource* source in channel.sourcePool.sources)
+        for(ALBuffer* buffer in [channel clearUnusedBuffers])
         {
-            if(source.playing && source.buffer != nil)
-            {
-                [stillPlaying setObject:source.buffer forKey:source.buffer.name];
-            }
-            else
-            {
-                source.buffer = nil;
-            }
+            [preloadCache removeObjectForKey:[self cacheKeyForBuffer:buffer]];
         }
-		[preloadCache removeAllObjects];
-        [preloadCache addEntriesFromDictionary:stillPlaying];
 	}
-    if([stillPlaying count] > 0)
-    {
-        OAL_LOG_DEBUG(@"The following effects were still playing: %@", stillPlaying);
-    }
 }
 
 - (id<ALSoundSource>) playEffect:(NSString*) filePath
@@ -687,6 +664,7 @@ SYNTHESIZE_SINGLETON_FOR_CLASS(OALSimpleAudio);
 {
 	OAL_LOG_DEBUG(@"Stop all effects");
 	[channel stop];
+    [channel clearUnusedBuffers];
 }
 
 

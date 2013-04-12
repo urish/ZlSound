@@ -33,10 +33,12 @@
 #import "OALTools.h"
 #import "OALUtilityActions.h"
 #import "ObjectALMacros.h"
+#import "ARCSafe_MemMgmt.h"
 #import "IOSVersion.h"
 
 #pragma mark Asynchronous Operations
 
+/** \cond */
 /**
  * (INTERNAL USE) NSOperation for running an audio operation asynchronously.
  */
@@ -80,15 +82,15 @@
 
 + (id) operationWithTrack:(OALAudioTrack*) track url:(NSURL*) url seekTime:(NSTimeInterval)seekTime target:(id) target selector:(SEL) selector
 {
-	return arcsafe_autorelease([[self alloc] initWithTrack:track url:url seekTime:seekTime target:target selector:selector]);
+	return as_autorelease([[self alloc] initWithTrack:track url:url seekTime:seekTime target:target selector:selector]);
 }
 
 - (id) initWithTrack:(OALAudioTrack*) track url:(NSURL*) urlIn seekTime:(NSTimeInterval)seekTimeIn target:(id) targetIn selector:(SEL) selectorIn
 {
 	if(nil != (self = [super init]))
 	{
-		audioTrack = arcsafe_retain(track);
-		url = arcsafe_retain(urlIn);
+		audioTrack = as_retain(track);
+		url = as_retain(urlIn);
 		seekTime = seekTimeIn;
 		target = targetIn;
 		selector = selectorIn;
@@ -98,9 +100,9 @@
 
 - (void) dealloc
 {
-	arcsafe_release(audioTrack);
-	arcsafe_release(url);
-    arcsafe_super_dealloc();
+	as_release(audioTrack);
+	as_release(url);
+    as_superdealloc();
 }
 
 @end
@@ -146,7 +148,7 @@
 
 + (id) operationWithTrack:(OALAudioTrack*) track url:(NSURL*) url loops:(NSInteger) loops target:(id) target selector:(SEL) selector
 {
-	return arcsafe_autorelease([[self alloc] initWithTrack:track url:url loops:loops target:target selector:selector]);
+	return as_autorelease([[self alloc] initWithTrack:track url:url loops:loops target:target selector:selector]);
 }
 
 - (id) initWithTrack:(OALAudioTrack*) track url:(NSURL*) urlIn loops:(NSInteger) loopsIn target:(id) targetIn selector:(SEL) selectorIn
@@ -205,6 +207,7 @@
 - (void) setSuspended:(bool) value;
 
 @end
+/** \endcond */
 
 #pragma mark -
 #pragma mark AudioTrack
@@ -215,7 +218,7 @@
 
 + (id) track
 {
-	return arcsafe_autorelease([[self alloc] init]);
+	return as_autorelease([[self alloc] init]);
 }
 
 - (id) init
@@ -247,16 +250,16 @@
     player.delegate = nil;
     [player stop];
 
-	arcsafe_release(player);
-	arcsafe_release(operationQueue);
-	arcsafe_release(currentlyLoadedUrl);
-	arcsafe_release(simulatorPlayerRef);
+	as_release(player);
+	as_release(operationQueue);
+	as_release(currentlyLoadedUrl);
+	as_release(simulatorPlayerRef);
 	[gainAction stopAction];
-	arcsafe_release(gainAction);
+	as_release(gainAction);
 	[panAction stopAction];
-	arcsafe_release(panAction);
-	arcsafe_release(suspendHandler);
-	arcsafe_super_dealloc();
+	as_release(panAction);
+	as_release(suspendHandler);
+	as_superdealloc();
 }
 
 
@@ -275,26 +278,17 @@
 
 - (id<AVAudioPlayerDelegate>) delegate
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return delegate;
-	}
+    return delegate;
 }
 
 - (void) setDelegate:(id<AVAudioPlayerDelegate>) value
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		delegate = value;
-	}
+    delegate = value;
 }
 
 - (float) pan
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return pan;
-	}
+    return pan;
 }
 
 - (void) setPan:(float) value
@@ -320,10 +314,7 @@
 
 - (float) gain
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return gain;
-	}
+    return gain;
 }
 
 - (void) setVolume:(float) value
@@ -346,10 +337,7 @@
 
 - (bool) muted
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return muted;
-	}
+    return muted;
 }
 
 - (void) setMuted:(bool) value
@@ -368,10 +356,7 @@
 
 - (NSInteger) numberOfLoops
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return numberOfLoops;
-	}
+    return numberOfLoops;
 }
 
 - (void) setNumberOfLoops:(NSInteger) value
@@ -384,10 +369,7 @@
 
 - (bool) paused
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return paused;
-	}
+    return paused;
 }
 
 - (void) setPaused:(bool) value
@@ -523,88 +505,91 @@
 	 *
 	 * TODO: Need to find a way to avoid this situation.
 	 */
-	if(value)
+	OPTIONALLY_SYNCHRONIZED(self)
 	{
-		if(preloaded)
-		{
-			currentTime = player.currentTime;
-			if(self.playing)
-			{
-				[player stop];
-			}
-		}
-	}
-	else
-	{
-		if(preloaded)
-		{
-			NSError* error;
-			arcsafe_release(player);
-			player = [[AVAudioPlayer alloc] initWithContentsOfURL:currentlyLoadedUrl error:&error];
-			if(nil != error)
-			{
-				OAL_LOG_ERROR(@"%@: Could not reload URL %@: %@",
-							  self, currentlyLoadedUrl, [error localizedDescription]);
-				arcsafe_release(player);
-				player = nil;
-				preloaded = NO;
-				playing = NO;
-				paused = NO;
-				return;
-			}
-			
-			player.volume = muted ? 0 : gain;
-			player.numberOfLoops = numberOfLoops;
-			player.meteringEnabled = meteringEnabled;
-			player.delegate = self;
-			if([IOSVersion sharedInstance].version >= 4.0)
-			{
-				player.pan = pan;
-			}
-			
-			player.currentTime = currentTime;
-			
-			if(![player prepareToPlay])
-			{
-				OAL_LOG_ERROR(@"%@: Failed to prepareToPlay on resume: %@", self, currentlyLoadedUrl);
-				arcsafe_release(player);
-				player = nil;
-				preloaded = NO;
-				playing = NO;
-				paused = NO;
-				return;
-			}
-			
-			if(playing)
-			{
-				playing = [player play];
-				if(paused)
-				{
-					[player pause];
-				}
-			}
-		}
-	}
+        if(value)
+        {
+            if(preloaded)
+            {
+                currentTime = player.currentTime;
+                if(self.playing)
+                {
+                    [player stop];
+                }
+            }
+        }
+        else
+        {
+            if(preloaded)
+            {
+                NSError* error;
+                as_release(player);
+                player = [[AVAudioPlayer alloc] initWithContentsOfURL:currentlyLoadedUrl error:&error];
+                if(nil != error)
+                {
+                    OAL_LOG_ERROR(@"%@: Could not reload URL %@: %@",
+                                  self, currentlyLoadedUrl, [error localizedDescription]);
+                    as_release(player);
+                    player = nil;
+                    preloaded = NO;
+                    playing = NO;
+                    paused = NO;
+                    return;
+                }
 
-	
-	/*
-	if(value)
-	{
-		if(self.playing && !self.paused)
-		{
-			currentTime = player.currentTime;
-			[player pause];
-		}
-	}
-	else
-	{
-		if(self.playing && !self.paused)
-		{
-			player.currentTime = currentTime;
-			[player play];
-		}
-	}
-	 */
+                player.volume = muted ? 0 : gain;
+                player.numberOfLoops = numberOfLoops;
+                player.meteringEnabled = meteringEnabled;
+                player.delegate = self;
+                if([IOSVersion sharedInstance].version >= 4.0)
+                {
+                    player.pan = pan;
+                }
+
+                player.currentTime = currentTime;
+
+                if(![player prepareToPlay])
+                {
+                    OAL_LOG_ERROR(@"%@: Failed to prepareToPlay on resume: %@", self, currentlyLoadedUrl);
+                    as_release(player);
+                    player = nil;
+                    preloaded = NO;
+                    playing = NO;
+                    paused = NO;
+                    return;
+                }
+                
+                if(playing)
+                {
+                    playing = [player play];
+                    if(paused)
+                    {
+                        [player pause];
+                    }
+                }
+            }
+        }
+        
+        
+        /*
+        if(value)
+        {
+            if(self.playing && !self.paused)
+            {
+                currentTime = player.currentTime;
+                [player pause];
+            }
+        }
+        else
+        {
+            if(self.playing && !self.paused)
+            {
+                player.currentTime = currentTime;
+                [player play];
+            }
+        }
+         */
+    }
 }
 
 
@@ -637,7 +622,7 @@
 			[player stop];
 		}
 
-		arcsafe_release(player);
+		as_release(player);
 
 		if(wasPlaying)
 		{
@@ -661,8 +646,8 @@
 			player.pan = pan;
 		}
 		
-		arcsafe_release(currentlyLoadedUrl);
-		currentlyLoadedUrl = arcsafe_retain(url);
+		as_release(currentlyLoadedUrl);
+		currentlyLoadedUrl = as_retain(url);
 		
 		self.currentTime = seekTime;
 		playing = NO;
@@ -862,10 +847,10 @@
 	{
 		[self stopFade];
 		gainAction = [OALSequentialActions actions:
-					   [OALGainAction actionWithDuration:duration endValue:value],
-					   [OALCallAction actionWithCallTarget:target selector:selector withObject:self],
-					   nil];
-        arcsafe_retain_unused(gainAction);
+                      [OALPropertyAction gainActionWithDuration:duration endValue:value],
+                      [OALCallAction actionWithCallTarget:target selector:selector withObject:self],
+                      nil];
+        gainAction = as_retain(gainAction);
 		[gainAction runWithTarget:self];
 	}
 }
@@ -876,7 +861,7 @@
 	@synchronized(self)
 	{
 		[gainAction stopAction];
-		arcsafe_release(gainAction);
+		as_release(gainAction);
 		gainAction = nil;
 	}
 }
@@ -893,10 +878,10 @@
 		{
 			[self stopPan];
 			panAction = [OALSequentialActions actions:
-						  [OALPanAction actionWithDuration:duration endValue:value],
-						  [OALCallAction actionWithCallTarget:target selector:selector withObject:self],
-						  nil];
-            arcsafe_retain_unused(panAction);
+                         [OALPropertyAction panActionWithDuration:duration endValue:value],
+                         [OALCallAction actionWithCallTarget:target selector:selector withObject:self],
+                         nil];
+            panAction = as_retain(panAction);
 			[panAction runWithTarget:self];
 		}
 	}
@@ -910,7 +895,7 @@
 		@synchronized(self)
 		{
 			[panAction stopAction];
-			arcsafe_release(panAction);
+			as_release(panAction);
 			panAction = nil;
 		}
 	}
@@ -921,11 +906,11 @@
 	OPTIONALLY_SYNCHRONIZED(self)
 	{
 		[self stopActions];
-		arcsafe_release(currentlyLoadedUrl);
+		as_release(currentlyLoadedUrl);
 		currentlyLoadedUrl = nil;
 		
 		[player stop];
-		arcsafe_release(player);
+		as_release(player);
 		player = nil;
 		playing = NO;
 		paused = NO;
@@ -945,10 +930,7 @@
 
 - (bool) meteringEnabled
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		return meteringEnabled;
-	}
+    return meteringEnabled;
 }
 
 - (void) setMeteringEnabled:(bool) value
@@ -962,10 +944,7 @@
 
 - (void) updateMeters
 {
-	OPTIONALLY_SYNCHRONIZED(self)
-	{
-		[player updateMeters];
-	}
+    [player updateMeters];
 }
 
 - (float) averagePowerForChannel:(NSUInteger)channelNumber
@@ -997,7 +976,15 @@
 	}
 }
 
-#if defined(__MAC_10_7) || defined(__IPHONE_4_0)
+- (void)audioPlayerEndInterruption:(AVAudioPlayer *)playerIn withOptions:(NSUInteger)flags
+{
+	if([delegate respondsToSelector:@selector(audioPlayerEndInterruption:withOptions:)])
+	{
+		[delegate audioPlayerEndInterruption:playerIn withOptions:flags];
+	}
+}
+
+#if __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_6_0
 - (void)audioPlayerEndInterruption:(AVAudioPlayer *)playerIn withFlags:(NSUInteger)flags
 {
 	if([delegate respondsToSelector:@selector(audioPlayerEndInterruption:withFlags:)])
@@ -1005,7 +992,6 @@
 		[delegate audioPlayerEndInterruption:playerIn withFlags:flags];
 	}
 }
-#endif
 
 - (void) audioPlayerEndInterruption:(AVAudioPlayer*) playerIn
 {
@@ -1014,7 +1000,8 @@
 		[delegate audioPlayerEndInterruption:playerIn];
 	}
 }
-#endif //TARGET_OS_IPHONE
+#endif // __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_6_0
+#endif // TARGET_OS_IPHONE
 
 - (void) audioPlayerDecodeErrorDidOccur:(AVAudioPlayer*) playerIn error:(NSError*) error
 {

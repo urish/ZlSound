@@ -28,11 +28,10 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "OALFunction.h"
 #import "ObjectALConfig.h"
 
 
-#if OBJECTAL_USE_COCOS2D_ACTIONS
+#if OBJECTAL_CFG_USE_COCOS2D_ACTIONS
 
 #pragma mark Cocos2d Subclassing
 
@@ -44,10 +43,10 @@
 #define COCOS2D_SUBCLASS_HEADER(CLASS_A,CLASS_B)	\
 @interface CLASS_A: CLASS_B	\
 {	\
-	bool started;	\
+	bool started_;	\
 }	\
 	\
-@property(readonly,nonatomic) bool running;	\
+@property(nonatomic,readonly,assign) bool running;	\
 - (void) runWithTarget:(id) target;	\
 - (void) prepareWithTarget:(id) target;	\
 - (void) stopAction;	\
@@ -72,7 +71,7 @@
 {	\
 	[super startWithTarget:targetIn];	\
 	[self prepareWithTarget:targetIn];	\
-	started = YES;	\
+	started_ = YES;	\
 	[self runWithTarget:targetIn];	\
 }	\
 	\
@@ -89,7 +88,7 @@
 	\
 - (void) runWithTarget:(id) targetIn	\
 {	\
-	if(!started)	\
+	if(!started_)	\
 	{	\
 		[[CCActionManager sharedManager] addAction:self target:targetIn paused:NO];	\
 	}	\
@@ -100,7 +99,7 @@
 	[[CCActionManager sharedManager] removeAction:self];	\
 }	\
 
-#endif /* OBJECTAL_USE_COCOS2D_ACTIONS */
+#endif /* OBJECTAL_CFG_USE_COCOS2D_ACTIONS */
 
 
 
@@ -108,7 +107,7 @@
  * It's usually more convenient when using Cocos2d to have all actions as part of
  * the Cocos2d action system.  You can set this in ObjectALConfig.h
  */
-#if !OBJECTAL_USE_COCOS2D_ACTIONS
+#if !OBJECTAL_CFG_USE_COCOS2D_ACTIONS
 
 #pragma mark -
 #pragma mark OALAction (ObjectAL version)
@@ -118,30 +117,30 @@
  */
 @interface OALAction : NSObject
 {
-    /** The target to perform the action on */
-	id target;
-	float duration;
-	float elapsed;
-	bool running;
+    /** \cond */
+	float duration_;
+	float elapsed_;
+	bool running_;
+    /** \endcond */
 	
 	/** If TRUE, this action is running via OALActionManager. */
-	bool runningInManager;
+	bool runningInManager_;
 }
 
 
 #pragma mark Properties
 
 /** The target to perform the action on.  WEAK REFERENCE. */
-@property(readonly,nonatomic) id target;
+@property(nonatomic,readonly,assign) id target;
 
 /** The duration of the action, in seconds. */
-@property(readonly,nonatomic) float duration;
+@property(nonatomic,readonly,assign) float duration;
 
 /** The amount of time that has elapsed for this action, in seconds. */
-@property(readwrite,nonatomic) float elapsed;
+@property(nonatomic,readwrite,assign) float elapsed;
 
 /** If true, the action is currently running. */
-@property(readonly,nonatomic) bool running;
+@property(nonatomic,readonly,assign) bool running;
 
 
 #pragma mark Object Management
@@ -187,48 +186,23 @@
 @end
 
 
-#else /* !OBJECTAL_USE_COCOS2D_ACTIONS */
+#else /* !OBJECTAL_CFG_USE_COCOS2D_ACTIONS */
 
-COCOS2D_SUBCLASS_HEADER(OALAction, CCIntervalAction);
+COCOS2D_SUBCLASS_HEADER(OALAction, CCActionInterval);
 
-#endif /* !OBJECTAL_USE_COCOS2D_ACTIONS */
+#endif /* !OBJECTAL_CFG_USE_COCOS2D_ACTIONS */
 
 
 #pragma mark -
-#pragma mark OALFunctionAction
+#pragma mark OALPropertyAction
 
-/**
- * An action that applies a function to the proportionComplete parameter in
- * [update] before applying the result to the target.
- * This allows things like exponential and s-curve functions when applying gain
- * transitions, for example.
- */
-@interface OALFunctionAction: OALAction
-{
-	float startValue;
-	float endValue;
-	/** The lowest value that will ever be set over the course of this function. */
-	float lowValue;
-	/** The difference between the lowest and highest value. */
-	float delta;
-	id<OALFunction,NSObject> function;
-	/** The reverse function, if any. When this is not null, the reverse function is used. */
-	OALReverseFunction* reverseFunction;
-	/** The basic function that will be applied normally, or reversed. */
-	id<OALFunction,NSObject> realFunction;
-}
-
-
-#pragma mark Properties
-
-/** The function that will be applied. */
-@property(readwrite,retain,nonatomic) id<OALFunction,NSObject> function;
+@interface OALPropertyAction: OALAction
 
 /** The value that the property in the target will hold at the start of the action. */
-@property(readwrite,assign,nonatomic) float startValue;
+@property(nonatomic,readwrite,assign) float startValue;
 
 /** The value that the property in the target will hold at the end of the action. */
-@property(readwrite,assign,nonatomic) float endValue;
+@property(nonatomic,readwrite,assign) float endValue;
 
 
 #pragma mark Object Management
@@ -237,77 +211,115 @@ COCOS2D_SUBCLASS_HEADER(OALAction, CCIntervalAction);
  * The start value will be the current value of the target this action is applied to.
  *
  * @param duration The duration of this action in seconds.
+ * @param propertyKey The property to modify.
  * @param endValue The "ending" value that this action will converge upon when setting the target's property.
- * @return A new action.
- */
-+ (id) actionWithDuration:(float) duration endValue:(float) endValue;
-
-/** Create a new action.
- * The start value will be the current value of the target this action is applied to.
- *
- * @param duration The duration of this action in seconds.
- * @param endValue The "ending" value that this action will converge upon when setting the target's property.
- * @param function The function to apply in this action's update method.
  * @return A new action.
  */
 + (id) actionWithDuration:(float) duration
-				 endValue:(float) endValue
-				 function:(id<OALFunction,NSObject>) function;
+              propertyKey:(NSString*) propertyKey
+                 endValue:(float) endValue;
 
 /** Create a new action.
  *
  * @param duration The duration of this action in seconds.
+ * @param propertyKey The property to modify.
  * @param startValue The "starting" value that this action will diverge from when setting the target's
  *                   property. If NAN, use the current value from the target.
  * @param endValue The "ending" value that this action will converge upon when setting the target's property.
- * @param function The function to apply in this action's update method.
  * @return A new action.
  */
 + (id) actionWithDuration:(float) duration
+              propertyKey:(NSString*) propertyKey
 			   startValue:(float) startValue
-				 endValue:(float) endValue
-				 function:(id<OALFunction,NSObject>) function;
+				 endValue:(float) endValue;
 
 /** Initialize an action using the default function.
  * The start value will be the current value of the target this action is applied to.
  *
  * @param duration The duration of this action in seconds.
+ * @param propertyKey The property to modify.
  * @param endValue The "ending" value that this action will converge upon when setting the target's property.
- * @return The initialized action.
- */
-- (id) initWithDuration:(float) duration endValue:(float) endValue;
-
-/** Initialize an action.
- * The start value will be the current value of the target this action is applied to.
- *
- * @param duration The duration of this action in seconds.
- * @param endValue The "ending" value that this action will converge upon when setting the target's property.
- * @param function The function to apply in this action's update method.
  * @return The initialized action.
  */
 - (id) initWithDuration:(float) duration
-			   endValue:(float) endValue
-			   function:(id<OALFunction,NSObject>) function;
+            propertyKey:(NSString*) propertyKey
+               endValue:(float) endValue;
 
 /** Initialize an action.
  *
  * @param duration The duration of this action in seconds.
+ * @param propertyKey The property to modify.
  * @param startValue The "starting" value that this action will diverge from when setting the target's
  *                   property. If NAN, use the current value from the target.
  * @param endValue The "ending" value that this action will converge upon when setting the target's property.
- * @param function The function to apply in this action's update method.
  * @return The initialized action.
  */
 - (id) initWithDuration:(float) duration
+            propertyKey:(NSString*) propertyKey
 			 startValue:(float) startValue
-			   endValue:(float) endValue
-			   function:(id<OALFunction,NSObject>) function;
-
-
-#pragma mark Utility
-
-/** Get the function that this action would use by default if none was specified. */
-+ (id<OALFunction,NSObject>) defaultFunction;
-
+			   endValue:(float) endValue;
 
 @end
+
+
+#pragma mark -
+#pragma mark OALEaseAction
+
+typedef float (*EaseFunctionPtr)(float);
+
+typedef enum
+{
+    kOALEaseIn,
+    kOALEaseOut,
+    kOALEaseInOut,
+} OALEasePhase;
+
+typedef enum
+{
+    kOALEaseShapeSine,
+    kOALEaseShapeExponential,
+} OALEaseShape;
+
+/**
+ * Applies an easing function to another action.
+ * Normally, an action progresses at a linear rate. An ease changes that to a
+ * curve.
+ */
+@interface OALEaseAction: OALAction
+{
+    OALAction* action_;
+}
+
+/** Create a new ease action.
+ *
+ * @param shape The shape of the curve to apply.
+ * @param phase What phase of the action to apply the curve to.
+ * @action The action to apple the curve to.
+ * @return A new action.
+ */
++ (OALEaseAction*) actionWithShape:(OALEaseShape) shape
+                             phase:(OALEasePhase) phase
+                            action:(OALAction*) action;
+
+/** Initialize an ease action.
+ *
+ * @param shape The shape of the curve to apply.
+ * @param phase What phase of the action to apply the curve to.
+ * @action The action to apple the curve to.
+ * @return The initialized action.
+ */
+- (id) initWithShape:(OALEaseShape) shape
+               phase:(OALEasePhase) phase
+              action:(OALAction*) action;
+
+/** Get a pointer to an ease function of the specified shape and phase.
+ *
+ * @param shape The shape of the curve to apply.
+ * @param phase What phase of the action to apply the curve to.
+ * @return a pointer to the appropriate function.
+ */
++ (EaseFunctionPtr) easeFunctionForShape:(OALEaseShape) shape
+                                   phase:(OALEasePhase) phase;
+
+@end
+
