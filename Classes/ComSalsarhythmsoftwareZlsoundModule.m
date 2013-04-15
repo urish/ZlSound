@@ -108,4 +108,9 @@
     return [[ComSalsarhythmsoftwareZlsoundReverbProxy alloc] initWithListener:context.listener];
 }
 
+-(id)resumeAudioSession:(id)args {
+    [[OALAudioSession sharedInstance] forceEndInterruption];
+    return nil;
+}
+
 @end
