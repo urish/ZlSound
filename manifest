@@ -2,7 +2,9 @@
 # this is your module manifest and used by Titanium
 # during compilation, packaging, distribution, etc.
 #
-version: 2.0
+version: 2.1
+apiversion: 2
+architectures: armv7 i386 x86_64 arm64
 description: Zero Latency Sound for iOS
 author: Uri Shaked
 license: Appcelerator Market Place
@@ -13,4 +15,4 @@ name: zlsound
 moduleid: com.salsarhythmsoftware.zlsound
 guid: bbbb1a7c-4c67-4385-b0ad-be33df15e044
 platform: iphone
-minsdk: 1.7.2
+minsdk: 3.5.1
